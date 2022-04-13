@@ -4,10 +4,10 @@ import requests
 import rdflib
 import lxml.html
 
-
 EXAMPLE_PREFIX = ''
 ONTOLOGY_NAME = 'ontology.nt'
 WIKI_BASE_PAGE = r'https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)'
+WIKI_INIT = r'https://en.wikipedia.org'
 CREATE_FLAG = 'create'
 QUESTION_FLAG = 'question'
 
@@ -54,12 +54,14 @@ class Query:
             re.compile(r'Who is the prime minister of (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
-                                                                              RELATION=SPARQL_RELATIONS['PRIME_MINISTER_OF'])
+                                                                              RELATION=SPARQL_RELATIONS[
+                                                                                  'PRIME_MINISTER_OF'])
                                        ),
             re.compile(r'What is the population of (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
-                                                                              RELATION=SPARQL_RELATIONS['POPULATION_OF'])
+                                                                              RELATION=SPARQL_RELATIONS[
+                                                                                  'POPULATION_OF'])
                                        ),
             re.compile(r'What is the area of (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
@@ -69,7 +71,8 @@ class Query:
             re.compile(r'What is the form of government in (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
-                                                                              RELATION=SPARQL_RELATIONS['FORM_OF_GOV_IN'])
+                                                                              RELATION=SPARQL_RELATIONS[
+                                                                                  'FORM_OF_GOV_IN'])
                                        ),
             re.compile(r'What is the capital of (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
@@ -80,29 +83,39 @@ class Query:
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
                                                                                        REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=SPARQL_RELATIONS['PRESIDENT_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS['BIRTH_DATE'])
+                                                                                       COUNTRY_RELATION=
+                                                                                       SPARQL_RELATIONS['PRESIDENT_OF'],
+                                                                                       REQ_RELATION=SPARQL_RELATIONS[
+                                                                                           'BIRTH_DATE'])
                                        ),
             re.compile(r'Where was the president of (?P<COUNTRY>\w+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
                                                                                        REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=SPARQL_RELATIONS['PRESIDENT_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS['BIRTH_PLACE'])
+                                                                                       COUNTRY_RELATION=
+                                                                                       SPARQL_RELATIONS['PRESIDENT_OF'],
+                                                                                       REQ_RELATION=SPARQL_RELATIONS[
+                                                                                           'BIRTH_PLACE'])
                                        ),
             re.compile(r'When was the prime minister of (?P<COUNTRY>\w+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
                                                                                        REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=SPARQL_RELATIONS['PRIME_MINISTER_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS['BIRTH_DATE'])
+                                                                                       COUNTRY_RELATION=
+                                                                                       SPARQL_RELATIONS[
+                                                                                           'PRIME_MINISTER_OF'],
+                                                                                       REQ_RELATION=SPARQL_RELATIONS[
+                                                                                           'BIRTH_DATE'])
                                        ),
             re.compile(r'Where was the prime minister of (?P<COUNTRY>\w+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
                                                                                        REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=SPARQL_RELATIONS['PRIME_MINISTER_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS['BIRTH_PLACE'])
+                                                                                       COUNTRY_RELATION=
+                                                                                       SPARQL_RELATIONS[
+                                                                                           'PRIME_MINISTER_OF'],
+                                                                                       REQ_RELATION=SPARQL_RELATIONS[
+                                                                                           'BIRTH_PLACE'])
                                        ),
             re.compile(r'Who is (?P<ENTITY>\w+)\?'): '',
             re.compile(r'How many (?P<GOVERNMENT1>\w+) are also (?P<GOVERNMENT2>\w+)\?'): '',
@@ -121,7 +134,7 @@ class Query:
         print(f"Error: unrecognized query received - '{query}.'")
 
     def query(self, query):
-        sparql_q = self.query2SPARQL[query]
+        sparql_q = self.query_to_SPARQL[query]
         return self.ontology.query(sparql_q)
 
 
@@ -149,39 +162,70 @@ class Ontology:
     def build_ontology(self):
         r = requests.get(WIKI_BASE_PAGE)
         doc = lxml.html.fromstring(r.content)
-
-        for country_page in doc.xpath("(//table)[1]/tbody/tr/td[1]//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href"):
+        for country_page in doc.xpath(
+                "(//table)[1]/tbody/tr/td[1]//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href"):
             self.extract_country_info(country_page)
+
         # save the ontology
         self.ontology.serialize(self.ontology_name, format=self.ontology_name.split('.')[-1])
 
     def extract_country_info(self, path):
+        path = WIKI_INIT + path
+        print(f'path {path}')
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
-        country_name = doc.xpath("(//h1)[1]/text()")
-        info_box = doc.xpath("//table[contains(@class, 'infobox')]")[0]
+        country_name = doc.xpath("//h1[1]/text()")[0].replace(" ", "_")
+
+        if country_name[0] == '/':
+            country_name = country_name[1:]
+
+        capital, form_of_gov, president_box, president_page, president_name, prime_minister_page, prime_minister_name = [
+                                                                                                                            ''] * 7
+
+        # vcard for new zealand
+        info_box = doc.xpath("//table[contains(@class, 'infobox') or  contains(@class, 'vcard')][1]")[0]
 
         # extract fields
-        capital = info_box.xpath("//tr[./th[contains(text(), 'Capital')]]")[0].replace(" ", "_")
-        form_of_gov = '_'.join(info_box.xpath("//tr[./th//a[contains(text(), 'Government')]]/td//text()"))
-        president_box = info_box.xpath("//tr[./th//a[contains(text(), 'President')]]/td")
-        president_page = president_box.xpath("//a//@href")
-        president_name = president_box.xpath("//a//text()")
-        prime_minister_box = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister')]]/td")
-        prime_minister_page = prime_minister_box.xpath("//a//@href")
-        prime_minister_name = prime_minister_box.xpath("//a//text()")
+        capital_box = info_box.xpath("//tr[./th[contains(text(), 'Capital')]]//a/text()")
+        if len(capital_box) > 0:
+            capital = capital_box[0].replace(" ", "_")
 
-        # declare entities
-        COUNTRY = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{country_name}")
-        CAPITAL = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{capital}")
-        FORM_OF_GOV = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{form_of_gov}")
-        PRESIDENT = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{president_name}")
-        PRIME_MINISTER = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{prime_minister_name}")
-        # add connections to the graph
-        self.ontology.add((CAPITAL, self.CAPITAL_OF, COUNTRY))
-        self.ontology.add((FORM_OF_GOV, self.FORM_OF_GOV_IN, COUNTRY))
-        self.ontology.add((PRESIDENT, self.PRESIDENT_OF, COUNTRY))
-        self.ontology.add((PRIME_MINISTER, self.PRIME_MINISTER_OF, COUNTRY))
+        forms = []
+        form_of_gov = info_box.xpath("//tr[./th//a[contains(text(), 'Government')]]/td/a//text()")
+
+        for form in form_of_gov:
+            forms.append(form.replace(" ", "_"))
+        form_of_gov = '_'.join(forms)
+
+        president_box = info_box.xpath("//tr[./th//a[contains(text(), 'President')]]/td")
+        if len(president_box) > 0:
+            president_page = info_box.xpath("//tr[./th//a[contains(text(), 'President')]]/td//a//@href")
+            president_name = info_box.xpath("//tr[./th//a[contains(text(), 'President')]]/td//a//text()")[0].replace(
+                " ", "_")
+
+        prime_minister_box = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister')]]/td")
+
+        if len(prime_minister_box) > 0:
+            prime_minister_page = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister')]]/td//a//@href")
+            prime_minister_name = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister')]]/td//text()[1]")[
+                0].replace(" ", "_")
+
+        # declare entities and add connections to the graph
+        if country_name != '':
+            COUNTRY = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{country_name}")
+
+            if capital != '':
+                CAPITAL = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{capital}")
+                self.ontology.add((CAPITAL, self.CAPITAL_OF, COUNTRY))
+            if form_of_gov != '':
+                FORM_OF_GOV = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{form_of_gov}")
+                self.ontology.add((FORM_OF_GOV, self.FORM_OF_GOV_IN, COUNTRY))
+            if president_name != '':
+                PRESIDENT = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{president_name}")
+                self.ontology.add((PRESIDENT, self.PRESIDENT_OF, COUNTRY))
+            if prime_minister_name != '':
+                PRIME_MINISTER = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{prime_minister_name}")
+                self.ontology.add((PRIME_MINISTER, self.PRIME_MINISTER_OF, COUNTRY))
 
     def extract_president_info(self, path):
         r = requests.get(path)
