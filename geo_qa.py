@@ -4,7 +4,7 @@ import requests
 import rdflib
 import lxml.html
 
-EXAMPLE_PREFIX = ''
+EXAMPLE_PREFIX = r'http://example.org'
 ONTOLOGY_NAME = 'ontology.nt'
 WIKI_BASE_PAGE = r'https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)'
 WIKI_INIT = r'https://en.wikipedia.org'
@@ -15,23 +15,23 @@ COUNTRY_FILTER_TEMPLATE = '?{VAR} {RELATION} {{COUNTRY}} .'
 COUNTRY_PERSONAL_FILTER_TEMPLATE = '?{VAR_PERSON} {COUNTRY_RELATION} {{COUNTRY}} .' \
                                    '?{VAR_PERSON} {REQ_RELATION} ?{REQ_VAR} .'
 
-SPARQL_TEMPLATE = 'SELECT {SELECT} ' \
-                  'WHERE {' \
+SPARQL_TEMPLATE = 'select {SELECT} ' \
+                  'where {{{{' \
                   '{FILTERS}' \
-                  '}'
+                  '}}}}'
 
 ####################################################################
 # SPARQL relations
 ####################################################################
 SPARQL_RELATIONS = {
-    'PRESIDENT_OF': f'{EXAMPLE_PREFIX}/president_of',
-    'PRIME_MINISTER_OF': f'{EXAMPLE_PREFIX}/prime_minister_of',
-    'POPULATION_OF': f'{EXAMPLE_PREFIX}/population_of',
-    'AREA_OF': f'{EXAMPLE_PREFIX}/area_of',
-    'FORM_OF_GOV_IN': f'{EXAMPLE_PREFIX}/form_of_government_in',
-    'CAPITAL_OF': f'{EXAMPLE_PREFIX}/capital_of',
-    'BIRTH_DATE': f'{EXAMPLE_PREFIX}/birth_date',
-    'BIRTH_PLACE': f'{EXAMPLE_PREFIX}/birth_place'
+    'PRESIDENT_OF': f'<{EXAMPLE_PREFIX}/president_of>',
+    'PRIME_MINISTER_OF': f'<{EXAMPLE_PREFIX}/prime_minister_of>',
+    'POPULATION_OF': f'<{EXAMPLE_PREFIX}/population_of>',
+    'AREA_OF': f'<{EXAMPLE_PREFIX}/area_of>',
+    'FORM_OF_GOV_IN': f'<{EXAMPLE_PREFIX}/form_of_government_in>',
+    'CAPITAL_OF': f'<{EXAMPLE_PREFIX}/capital_of>',
+    'BIRTH_DATE': f'<{EXAMPLE_PREFIX}/birth_date>',
+    'BIRTH_PLACE': f'<{EXAMPLE_PREFIX}/birth_place>'
 }
 
 
@@ -45,7 +45,7 @@ class Query:
 
     def __init__(self, ontology):
         self.ontology = rdflib.Graph().parse(ontology)
-        self.query2SPARQL = {
+        self.query2SPARQL_d = {
             re.compile(r'Who is the president of (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
@@ -71,8 +71,7 @@ class Query:
             re.compile(r'What is the form of government in (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
-                                                                              RELATION=SPARQL_RELATIONS[
-                                                                                  'FORM_OF_GOV_IN'])
+                                                                              RELATION=SPARQL_RELATIONS['FORM_OF_GOV_IN'])
                                        ),
             re.compile(r'What is the capital of (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
@@ -85,8 +84,7 @@ class Query:
                                                                                        REQ_VAR='e',
                                                                                        COUNTRY_RELATION=
                                                                                        SPARQL_RELATIONS['PRESIDENT_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS[
-                                                                                           'BIRTH_DATE'])
+                                                                                       REQ_RELATION=SPARQL_RELATIONS['BIRTH_DATE'])
                                        ),
             re.compile(r'Where was the president of (?P<COUNTRY>\w+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
@@ -125,16 +123,22 @@ class Query:
 
     def query_to_SPARQL(self, query):
         query = query.strip()
-        for pattern in self.query2SPARQL:
+        print(query)
+        for pattern in self.query2SPARQL_d:
             match = pattern.search(query)
             if match is None:
                 continue
-            args = match.groupdict()
-            return self.query2SPARQL[pattern].format(**args)
+            args = {key: f"<{EXAMPLE_PREFIX}/{val}>" for key, val in match.groupdict().items()}
+            return self.query2SPARQL_d[pattern].format(**args)
+
         print(f"Error: unrecognized query received - '{query}.'")
+        return None
 
     def query(self, query):
-        sparql_q = self.query_to_SPARQL[query]
+        sparql_q = self.query_to_SPARQL(query)
+        if sparql_q is None:
+            return None
+        print(f"SPARQL query is: {sparql_q}")
         return self.ontology.query(sparql_q)
 
 
@@ -147,17 +151,18 @@ class Ontology:
     """
 
     def __init__(self, ontology_name):
+        self.log = open('log.txt', 'w')
         self.ontology = rdflib.Graph()
         self.ontology_name = ontology_name
         # add relations
-        self.PRESIDENT_OF = rdflib.URIRef(SPARQL_RELATIONS['PRESIDENT_OF'])
-        self.PRIME_MINISTER_OF = rdflib.URIRef(SPARQL_RELATIONS['PRIME_MINISTER_OF'])
-        self.POPULATION_OF = rdflib.URIRef(SPARQL_RELATIONS['POPULATION_OF'])
-        self.AREA_OF = rdflib.URIRef(SPARQL_RELATIONS['AREA_OF'])
-        self.FORM_OF_GOV_IN = rdflib.URIRef(SPARQL_RELATIONS['FORM_OF_GOV_IN'])
-        self.CAPITAL_OF = rdflib.URIRef(SPARQL_RELATIONS['CAPITAL_OF'])
-        self.BIRTH_DATE = rdflib.URIRef(SPARQL_RELATIONS['BIRTH_DATE'])
-        self.BIRTH_PLACE = rdflib.URIRef(SPARQL_RELATIONS['BIRTH_PLACE'])
+        self.PRESIDENT_OF = rdflib.URIRef(SPARQL_RELATIONS['PRESIDENT_OF'][1:-1])
+        self.PRIME_MINISTER_OF = rdflib.URIRef(SPARQL_RELATIONS['PRIME_MINISTER_OF'][1:-1])
+        self.POPULATION_OF = rdflib.URIRef(SPARQL_RELATIONS['POPULATION_OF'][1:-1])
+        self.AREA_OF = rdflib.URIRef(SPARQL_RELATIONS['AREA_OF'][1:-1])
+        self.FORM_OF_GOV_IN = rdflib.URIRef(SPARQL_RELATIONS['FORM_OF_GOV_IN'][1:-1])
+        self.CAPITAL_OF = rdflib.URIRef(SPARQL_RELATIONS['CAPITAL_OF'][1:-1])
+        self.BIRTH_DATE = rdflib.URIRef(SPARQL_RELATIONS['BIRTH_DATE'][1:-1])
+        self.BIRTH_PLACE = rdflib.URIRef(SPARQL_RELATIONS['BIRTH_PLACE'][1:-1])
 
     def build_ontology(self):
         r = requests.get(WIKI_BASE_PAGE)
@@ -167,7 +172,9 @@ class Ontology:
             self.extract_country_info(country_page)
 
         # save the ontology
-        self.ontology.serialize(self.ontology_name, format=self.ontology_name.split('.')[-1])
+        # encoding = UTF-8
+        self.log.close()
+        self.ontology.serialize(self.ontology_name, format=self.ontology_name.split('.')[-1], encoding='UTF-8')
 
     def extract_country_info(self, path):
         path = WIKI_INIT + path
@@ -176,14 +183,15 @@ class Ontology:
         doc = lxml.html.fromstring(r.content)
         country_name = doc.xpath("//h1[1]/text()")[0].replace(" ", "_")
 
+        self.log.write(f"{path}:\n")
+
         if country_name[0] == '/':
             country_name = country_name[1:]
 
         capital, form_of_gov, president_box, president_page, president_name, prime_minister_page, prime_minister_name = [
                                                                                                                             ''] * 7
-
         # vcard for new zealand
-        info_box = doc.xpath("//table[contains(@class, 'infobox') or  contains(@class, 'vcard')][1]")[0]
+        info_box = doc.xpath("//table[contains(@class, 'infobox') or contains(@class, 'vcard')][1]")[0]
 
         # extract fields
         capital_box = info_box.xpath("//tr[./th[contains(text(), 'Capital')]]//a/text()")
@@ -197,18 +205,17 @@ class Ontology:
             forms.append(form.replace(" ", "_"))
         form_of_gov = '_'.join(forms)
 
-        president_box = info_box.xpath("//tr[./th//a[contains(text(), 'President')]]/td")
+        # Emperor for japan
+        president_box = info_box.xpath("//tr[./th//a[starts-with(text(), 'President') or contains(text(), 'Chief Executive')]]/td")
         if len(president_box) > 0:
-            president_page = info_box.xpath("//tr[./th//a[contains(text(), 'President')]]/td//a//@href")
-            president_name = info_box.xpath("//tr[./th//a[contains(text(), 'President')]]/td//a//text()")[0].replace(
-                " ", "_")
+            president_page = president_box[0].xpath(".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
+            president_name = president_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
 
-        prime_minister_box = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister')]]/td")
-
+        # Chancellor for germany
+        prime_minister_box = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister') or contains(text(), 'Premier')]]/td")
         if len(prime_minister_box) > 0:
-            prime_minister_page = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister')]]/td//a//@href")
-            prime_minister_name = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister')]]/td//text()[1]")[
-                0].replace(" ", "_")
+            prime_minister_page = prime_minister_box[0].xpath(".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
+            prime_minister_name = prime_minister_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
 
         # declare entities and add connections to the graph
         if country_name != '':
@@ -217,20 +224,61 @@ class Ontology:
             if capital != '':
                 CAPITAL = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{capital}")
                 self.ontology.add((CAPITAL, self.CAPITAL_OF, COUNTRY))
+            else:
+                self.log.write("\t (-) Error: couldn't extract capital.\n")
+
             if form_of_gov != '':
                 FORM_OF_GOV = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{form_of_gov}")
                 self.ontology.add((FORM_OF_GOV, self.FORM_OF_GOV_IN, COUNTRY))
+            else:
+                self.log.write("\t (-) Error: couldn't extract form of government.\n")
+
             if president_name != '':
                 PRESIDENT = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{president_name}")
                 self.ontology.add((PRESIDENT, self.PRESIDENT_OF, COUNTRY))
+            else:
+                self.log.write("\t (-) Error: couldn't extract president name.\n")
+
             if prime_minister_name != '':
                 PRIME_MINISTER = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{prime_minister_name}")
                 self.ontology.add((PRIME_MINISTER, self.PRIME_MINISTER_OF, COUNTRY))
+            else:
+                self.log.write("\t (-) Error: couldn't extract prime minister name.\n")
 
-    def extract_president_info(self, path):
+        else:
+            self.log.write("\t (-) Error: couldn't extract country name.\n")
+
+        if len(president_page) > 0:
+            self.extract_person_info(president_page[0], president_name)
+        else:
+            self.log.write("\t (-) Error: couldn't extract president page.\n")
+
+        if len(prime_minister_page) > 0:
+            self.extract_person_info(prime_minister_page[0], prime_minister_name)
+        else:
+            self.log.write("\t (-) Error: couldn't extract prime minister page.\n")
+
+    def extract_person_info(self, path, name):
+        path = WIKI_INIT + path
+        print(f"{name}: {path}")
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
-        info_box = doc.xpath("//table[contains(@class, 'infobox')]")[0]
+        info_box = doc.xpath("//table[contains(@class, 'infobox')]")
+        if len(info_box) == 0:
+            self.log.write("\tError: couldn't find infobox in president page.\n")
+            return
+
+        date_of_birth, place_of_birth = [''] * 2
+        birth_box = info_box[0].xpath("//tr[./th[contains(text(), 'Born')]]/td")
+        if len(birth_box) > 0:
+            date_of_birth = birth_box[0].xpath(".//span[contains(@class, 'bday')]/text()")
+
+        if len(date_of_birth) > 0:
+            PRESIDENT = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{name}")
+            DATE = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{date_of_birth[0]}")
+            self.ontology.add((DATE, self.BIRTH_DATE, PRESIDENT))
+        else:
+            self.log.write("\tError: couldn't extract president date of birth.\n")
 
 
 ####################################################################
@@ -249,7 +297,7 @@ def main():
             exit(-1)
         q = sys.argv[2]
         query_handler = Query(ONTOLOGY_NAME)
-        print(query_handler.query(q))
+        print(f"The result is: {list(query_handler.query(q))}")
     else:
         print(f'Error: unrecognized flag received - {sys.argv[1]}.')
         exit(-1)
