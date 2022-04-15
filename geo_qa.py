@@ -14,12 +14,22 @@ QUESTION_FLAG = 'question'
 COUNTRY_FILTER_TEMPLATE = '?{VAR} {RELATION} {{COUNTRY}} .'
 COUNTRY_PERSONAL_FILTER_TEMPLATE = '?{VAR_PERSON} {COUNTRY_RELATION} {{COUNTRY}} .' \
                                    '?{VAR_PERSON} {REQ_RELATION} ?{REQ_VAR} .'
+ENTITY_TEMPLATE = '{{ENTITY}} ?{COUNTRY_RELATION} ?{COUNTRY} .'
+GOVERNMENT_FILTER_TEMPLATE = '{{FORM1}} {COUNTRY_RELATION} ?{COUNTRY} .' \
+                             '{{FORM2}} {COUNTRY_RELATION} ?{COUNTRY} .'
+LIST_FILTER_TEMPLATE = '?{CAPITAL} {COUNTRY_RELATION} ?{COUNTRY} .' \
+                       ' FILTER regex(str(?{CAPITAL}), "{{STR}}") .'
+PRESIDENT_FILTER_TEMPLATE = '?{PRESIDENT} {PRESIDENT_RELATION} ?{COUNTRY} .' \
+                       '?{PRESIDENT} {BORN_RELATION} {{COUNTRY}} .'
 
 SPARQL_TEMPLATE = 'select {SELECT} ' \
                   'where {{{{' \
                   '{FILTERS}' \
                   '}}}}'
 
+# TODO: 1. Fix _ issue
+#       2. display correct format of output
+#       3. fixing encoding of serilize
 ####################################################################
 # SPARQL relations
 ####################################################################
@@ -71,7 +81,8 @@ class Query:
             re.compile(r'What is the form of government in (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
-                                                                              RELATION=SPARQL_RELATIONS['FORM_OF_GOV_IN'])
+                                                                              RELATION=SPARQL_RELATIONS[
+                                                                                  'FORM_OF_GOV_IN'])
                                        ),
             re.compile(r'What is the capital of (?P<COUNTRY>\w+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
@@ -84,7 +95,8 @@ class Query:
                                                                                        REQ_VAR='e',
                                                                                        COUNTRY_RELATION=
                                                                                        SPARQL_RELATIONS['PRESIDENT_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS['BIRTH_DATE'])
+                                                                                       REQ_RELATION=SPARQL_RELATIONS[
+                                                                                           'BIRTH_DATE'])
                                        ),
             re.compile(r'Where was the president of (?P<COUNTRY>\w+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
@@ -115,20 +127,51 @@ class Query:
                                                                                        REQ_RELATION=SPARQL_RELATIONS[
                                                                                            'BIRTH_PLACE'])
                                        ),
-            re.compile(r'Who is (?P<ENTITY>\w+)\?'): '',
-            re.compile(r'How many (?P<GOVERNMENT1>\w+) are also (?P<GOVERNMENT2>\w+)\?'): '',
-            re.compile(r'List all countries whose capital name contains the string (?P<VAR>\w+)'): '',
-            re.compile(r'How many presidents were born in (?P<COUNTRY>\w+)\?'): '',
+            re.compile(r'Who is (?P<ENTITY>\w+)\?'):
+                SPARQL_TEMPLATE.format(SELECT='?r ?c',
+                                       FILTERS=ENTITY_TEMPLATE.format(
+                                           COUNTRY_RELATION='r',
+                                           COUNTRY='c')
+                                       ),
+
+            re.compile(r'How many (?P<FORM1>\w+) are also (?P<FORM2>\w+)\?'):
+                SPARQL_TEMPLATE.format(SELECT='(count(distinct ?c) as ?count )',
+                                       FILTERS=GOVERNMENT_FILTER_TEMPLATE.format(
+                                           COUNTRY_RELATION=SPARQL_RELATIONS['FORM_OF_GOV_IN'],
+                                           COUNTRY='c')
+                                       ),
+            re.compile(r'List all countries whose capital name contains the string (?P<STR>\w+)'):
+                SPARQL_TEMPLATE.format(SELECT='?c',
+                                       FILTERS=LIST_FILTER_TEMPLATE.format(
+                                           COUNTRY_RELATION=SPARQL_RELATIONS['CAPITAL_OF'],
+                                           COUNTRY='c',
+                                           CAPITAL='d')
+                                       ),
+            re.compile(r'How many presidents were born in (?P<COUNTRY>\w+)\?'):
+                SPARQL_TEMPLATE.format(SELECT='(count(distinct ?p) as ?count )',
+                                       FILTERS=PRESIDENT_FILTER_TEMPLATE.format(
+                                           PRESIDENT='p',
+                                           PRESIDENT_RELATION=SPARQL_RELATIONS['PRESIDENT_OF'],
+                                           BORN_RELATION=SPARQL_RELATIONS['BIRTH_PLACE'],
+                                           COUNTRY='c')
+                                       ),
         }
 
     def query_to_SPARQL(self, query):
         query = query.strip()
         print(query)
+        args = {}
+
         for pattern in self.query2SPARQL_d:
             match = pattern.search(query)
             if match is None:
                 continue
-            args = {key: f"<{EXAMPLE_PREFIX}/{val}>" for key, val in match.groupdict().items()}
+            for key, val in match.groupdict().items():
+                if key == "STR":
+                    args[key] = val
+                else:
+                    args[key] = f"<{EXAMPLE_PREFIX}/{val}>"
+
             return self.query2SPARQL_d[pattern].format(**args)
 
         print(f"Error: unrecognized query received - '{query}.'")
@@ -190,7 +233,6 @@ class Ontology:
 
         capital, form_of_gov, president_box, president_page, president_name, prime_minister_page, prime_minister_name = [
                                                                                                                             ''] * 7
-        # vcard for new zealand
         info_box = doc.xpath("//table[contains(@class, 'infobox') or contains(@class, 'vcard')][1]")[0]
 
         # extract fields
@@ -199,22 +241,25 @@ class Ontology:
             capital = capital_box[0].replace(" ", "_")
 
         forms = []
-        form_of_gov = info_box.xpath("//tr[./th//a[contains(text(), 'Government')]]/td/a//text()")
+        form_of_gov = info_box.xpath("//tr[./th//a[contains(text(), 'Government')]]/td//a[not(../../sup)]//text()")
 
         for form in form_of_gov:
             forms.append(form.replace(" ", "_"))
-        form_of_gov = '_'.join(forms)
 
         # Emperor for japan
-        president_box = info_box.xpath("//tr[./th//a[starts-with(text(), 'President') or contains(text(), 'Chief Executive')]]/td")
+        president_box = info_box.xpath(
+            "//tr[./th//a[starts-with(text(), 'President') or contains(text(), 'Chief Executive')]]/td")
         if len(president_box) > 0:
-            president_page = president_box[0].xpath(".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
+            president_page = president_box[0].xpath(
+                ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             president_name = president_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
 
         # Chancellor for germany
-        prime_minister_box = info_box.xpath("//tr[./th//a[contains(text(), 'Prime Minister') or contains(text(), 'Premier')]]/td")
+        prime_minister_box = info_box.xpath(
+            "//tr[./th//a[contains(text(), 'Prime Minister') or contains(text(), 'Premier')]]/td")
         if len(prime_minister_box) > 0:
-            prime_minister_page = prime_minister_box[0].xpath(".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
+            prime_minister_page = prime_minister_box[0].xpath(
+                ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             prime_minister_name = prime_minister_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
 
         # declare entities and add connections to the graph
@@ -227,9 +272,10 @@ class Ontology:
             else:
                 self.log.write("\t (-) Error: couldn't extract capital.\n")
 
-            if form_of_gov != '':
-                FORM_OF_GOV = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{form_of_gov}")
-                self.ontology.add((FORM_OF_GOV, self.FORM_OF_GOV_IN, COUNTRY))
+            if len(form_of_gov) > 0:
+                for form in forms:
+                    FORM_OF_GOV = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{form}")
+                    self.ontology.add((FORM_OF_GOV, self.FORM_OF_GOV_IN, COUNTRY))
             else:
                 self.log.write("\t (-) Error: couldn't extract form of government.\n")
 
@@ -269,14 +315,22 @@ class Ontology:
             return
 
         date_of_birth, place_of_birth = [''] * 2
-        birth_box = info_box[0].xpath("//tr[./th[contains(text(), 'Born')]]/td")
+        birth_box = info_box[0].xpath(".//tr[./th[contains(text(), 'Born')]]/td")
         if len(birth_box) > 0:
             date_of_birth = birth_box[0].xpath(".//span[contains(@class, 'bday')]/text()")
+            place_of_birth = birth_box[0].xpath(".//a//text()")
+
+        if len(place_of_birth) > 0:
+            PERSON = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{name}")
+            PLACE = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{place_of_birth[-1].replace(' ', '_')}")
+            self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+        else:
+            self.log.write("\tError: couldn't extract president place of birth.\n")
 
         if len(date_of_birth) > 0:
-            PRESIDENT = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{name}")
+            PERSON = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{name}")
             DATE = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{date_of_birth[0]}")
-            self.ontology.add((DATE, self.BIRTH_DATE, PRESIDENT))
+            self.ontology.add((PERSON, self.BIRTH_DATE, DATE))
         else:
             self.log.write("\tError: couldn't extract president date of birth.\n")
 
