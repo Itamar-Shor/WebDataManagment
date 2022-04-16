@@ -14,11 +14,12 @@ QUESTION_FLAG = 'question'
 COUNTRY_FILTER_TEMPLATE = '?{VAR} {RELATION} {{COUNTRY}} .'
 COUNTRY_PERSONAL_FILTER_TEMPLATE = '?{VAR_PERSON} {COUNTRY_RELATION} {{COUNTRY}} .' \
                                    '?{VAR_PERSON} {REQ_RELATION} ?{REQ_VAR} .'
-ENTITY_TEMPLATE = '{{ENTITY}} ?{COUNTRY_RELATION} ?{COUNTRY} .'
+ENTITY_TEMPLATE = '{{ENTITY}} ?{COUNTRY_RELATION} ?{COUNTRY} .' \
+                    ' FILTER regex(str(?{COUNTRY_RELATION}), "president|prime_minister", "i").'
 GOVERNMENT_FILTER_TEMPLATE = '{{FORM1}} {COUNTRY_RELATION} ?{COUNTRY} .' \
                              '{{FORM2}} {COUNTRY_RELATION} ?{COUNTRY} .'
 LIST_FILTER_TEMPLATE = '?{CAPITAL} {COUNTRY_RELATION} ?{COUNTRY} .' \
-                       ' FILTER regex(str(?{CAPITAL}), "{{STR}}") .'
+                       ' FILTER regex(str(?{CAPITAL}), "{{STR}}", "i") .'
 PRESIDENT_FILTER_TEMPLATE = '?{PRESIDENT} {PRESIDENT_RELATION} ?{COUNTRY} .' \
                        '?{PRESIDENT} {BORN_RELATION} {{COUNTRY}} .'
 
@@ -27,15 +28,18 @@ SPARQL_TEMPLATE = 'select {SELECT} ' \
                   '{FILTERS}' \
                   '}}}}'
 
-# TODO: 1. Fix _ issue
-#       2. display correct format of output
-#       3. fixing encoding of serilize
+# TODO: 1. Fix _ issue --> added possible fix
+#       2. display correct format of output ---> added possible fix
+#       3. fixing encoding of serilize ---> added possible fix
+#       4. check if contains the string .. is case sensitive or not (free/Free)
+#       5. add population, area to extract_country_info
+#       6. check if president includes: chief executive, emperor, ...
 ####################################################################
 # SPARQL relations
 ####################################################################
 SPARQL_RELATIONS = {
-    'PRESIDENT_OF': f'<{EXAMPLE_PREFIX}/president_of>',
-    'PRIME_MINISTER_OF': f'<{EXAMPLE_PREFIX}/prime_minister_of>',
+    'PRESIDENT_OF': f'<{EXAMPLE_PREFIX}/President_of>',
+    'PRIME_MINISTER_OF': f'<{EXAMPLE_PREFIX}/Prime_minister_of>',
     'POPULATION_OF': f'<{EXAMPLE_PREFIX}/population_of>',
     'AREA_OF': f'<{EXAMPLE_PREFIX}/area_of>',
     'FORM_OF_GOV_IN': f'<{EXAMPLE_PREFIX}/form_of_government_in>',
@@ -56,98 +60,93 @@ class Query:
     def __init__(self, ontology):
         self.ontology = rdflib.Graph().parse(ontology)
         self.query2SPARQL_d = {
-            re.compile(r'Who is the president of (?P<COUNTRY>\w+)\?'):
+            re.compile(r'Who is the president of (?P<COUNTRY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
                                                                               RELATION=SPARQL_RELATIONS['PRESIDENT_OF'])
                                        ),
-            re.compile(r'Who is the prime minister of (?P<COUNTRY>\w+)\?'):
+            re.compile(r'Who is the prime minister of (?P<COUNTRY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
                                                                               RELATION=SPARQL_RELATIONS[
                                                                                   'PRIME_MINISTER_OF'])
                                        ),
-            re.compile(r'What is the population of (?P<COUNTRY>\w+)\?'):
+            re.compile(r'What is the population of (?P<COUNTRY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
                                                                               RELATION=SPARQL_RELATIONS[
                                                                                   'POPULATION_OF'])
                                        ),
-            re.compile(r'What is the area of (?P<COUNTRY>\w+)\?'):
+            re.compile(r'What is the area of (?P<COUNTRY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
                                                                               RELATION=SPARQL_RELATIONS['AREA_OF'])
                                        ),
-            re.compile(r'What is the form of government in (?P<COUNTRY>\w+)\?'):
+            re.compile(r'What is the form of government in (?P<COUNTRY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
                                                                               RELATION=SPARQL_RELATIONS[
                                                                                   'FORM_OF_GOV_IN'])
                                        ),
-            re.compile(r'What is the capital of (?P<COUNTRY>\w+)\?'):
+            re.compile(r'What is the capital of (?P<COUNTRY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
                                        FILTERS=COUNTRY_FILTER_TEMPLATE.format(VAR='e',
                                                                               RELATION=SPARQL_RELATIONS['CAPITAL_OF'])
                                        ),
-            re.compile(r'When was the president of (?P<COUNTRY>\w+) born\?'):
+            re.compile(r'When was the president of (?P<COUNTRY>.+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
-                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
-                                                                                       REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=
-                                                                                       SPARQL_RELATIONS['PRESIDENT_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS[
-                                                                                           'BIRTH_DATE'])
+                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(
+                                           VAR_PERSON='m',
+                                           REQ_VAR='e',
+                                           COUNTRY_RELATION=SPARQL_RELATIONS['PRESIDENT_OF'],
+                                           REQ_RELATION=SPARQL_RELATIONS['BIRTH_DATE'])
                                        ),
-            re.compile(r'Where was the president of (?P<COUNTRY>\w+) born\?'):
+            re.compile(r'Where was the president of (?P<COUNTRY>.+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
-                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
-                                                                                       REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=
-                                                                                       SPARQL_RELATIONS['PRESIDENT_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS[
-                                                                                           'BIRTH_PLACE'])
+                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(
+                                           VAR_PERSON='m',
+                                           REQ_VAR='e',
+                                           COUNTRY_RELATION=SPARQL_RELATIONS['PRESIDENT_OF'],
+                                           REQ_RELATION=SPARQL_RELATIONS['BIRTH_PLACE'])
                                        ),
-            re.compile(r'When was the prime minister of (?P<COUNTRY>\w+) born\?'):
+            re.compile(r'When was the prime minister of (?P<COUNTRY>.+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
-                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
-                                                                                       REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=
-                                                                                       SPARQL_RELATIONS[
-                                                                                           'PRIME_MINISTER_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS[
-                                                                                           'BIRTH_DATE'])
+                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(
+                                           VAR_PERSON='m',
+                                           REQ_VAR='e',
+                                           COUNTRY_RELATION=SPARQL_RELATIONS['PRIME_MINISTER_OF'],
+                                           REQ_RELATION=SPARQL_RELATIONS['BIRTH_DATE'])
                                        ),
-            re.compile(r'Where was the prime minister of (?P<COUNTRY>\w+) born\?'):
+            re.compile(r'Where was the prime minister of (?P<COUNTRY>.+) born\?'):
                 SPARQL_TEMPLATE.format(SELECT='?e',
-                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(VAR_PERSON='m',
-                                                                                       REQ_VAR='e',
-                                                                                       COUNTRY_RELATION=
-                                                                                       SPARQL_RELATIONS[
-                                                                                           'PRIME_MINISTER_OF'],
-                                                                                       REQ_RELATION=SPARQL_RELATIONS[
-                                                                                           'BIRTH_PLACE'])
+                                       FILTERS=COUNTRY_PERSONAL_FILTER_TEMPLATE.format(
+                                           VAR_PERSON='m',
+                                           REQ_VAR='e',
+                                           COUNTRY_RELATION=
+                                           SPARQL_RELATIONS['PRIME_MINISTER_OF'],
+                                           REQ_RELATION=SPARQL_RELATIONS['BIRTH_PLACE'])
                                        ),
-            re.compile(r'Who is (?P<ENTITY>\w+)\?'):
+            re.compile(r'Who is (?P<ENTITY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='?r ?c',
                                        FILTERS=ENTITY_TEMPLATE.format(
                                            COUNTRY_RELATION='r',
                                            COUNTRY='c')
                                        ),
 
-            re.compile(r'How many (?P<FORM1>\w+) are also (?P<FORM2>\w+)\?'):
+            re.compile(r'How many (?P<FORM1>.+) are also (?P<FORM2>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='(count(distinct ?c) as ?count )',
                                        FILTERS=GOVERNMENT_FILTER_TEMPLATE.format(
                                            COUNTRY_RELATION=SPARQL_RELATIONS['FORM_OF_GOV_IN'],
                                            COUNTRY='c')
                                        ),
-            re.compile(r'List all countries whose capital name contains the string (?P<STR>\w+)'):
+            re.compile(r'List all countries whose capital name contains the string (?P<STR>.+)'):
                 SPARQL_TEMPLATE.format(SELECT='?c',
                                        FILTERS=LIST_FILTER_TEMPLATE.format(
                                            COUNTRY_RELATION=SPARQL_RELATIONS['CAPITAL_OF'],
                                            COUNTRY='c',
                                            CAPITAL='d')
                                        ),
-            re.compile(r'How many presidents were born in (?P<COUNTRY>\w+)\?'):
+            re.compile(r'How many presidents were born in (?P<COUNTRY>.+)\?'):
                 SPARQL_TEMPLATE.format(SELECT='(count(distinct ?p) as ?count )',
                                        FILTERS=PRESIDENT_FILTER_TEMPLATE.format(
                                            PRESIDENT='p',
@@ -167,6 +166,7 @@ class Query:
             if match is None:
                 continue
             for key, val in match.groupdict().items():
+                val = val.replace(' ', '_')
                 if key == "STR":
                     args[key] = val
                 else:
@@ -217,7 +217,7 @@ class Ontology:
         # save the ontology
         # encoding = UTF-8
         self.log.close()
-        self.ontology.serialize(self.ontology_name, format=self.ontology_name.split('.')[-1], encoding='UTF-8')
+        self.ontology.serialize(self.ontology_name, format=self.ontology_name.split('.')[-1], encoding='utf-8')
 
     def extract_country_info(self, path):
         path = WIKI_INIT + path
@@ -351,7 +351,9 @@ def main():
             exit(-1)
         q = sys.argv[2]
         query_handler = Query(ONTOLOGY_NAME)
-        print(f"The result is: {list(query_handler.query(q))}")
+        results = query_handler.query(q)
+
+        print(', '.join(sorted([' '.join([item.split('/')[-1].replace('_', ' ') for item in r]) for r in results])))
     else:
         print(f'Error: unrecognized flag received - {sys.argv[1]}.')
         exit(-1)
