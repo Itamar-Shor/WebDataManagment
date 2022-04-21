@@ -15,13 +15,13 @@ COUNTRY_FILTER_TEMPLATE = '?{VAR} {RELATION} {{COUNTRY}} .'
 COUNTRY_PERSONAL_FILTER_TEMPLATE = '?{VAR_PERSON} {COUNTRY_RELATION} {{COUNTRY}} .' \
                                    '?{VAR_PERSON} {REQ_RELATION} ?{REQ_VAR} .'
 ENTITY_TEMPLATE = '{{ENTITY}} ?{COUNTRY_RELATION} ?{COUNTRY} .' \
-                    ' FILTER regex(str(?{COUNTRY_RELATION}), "president|prime_minister", "i").'
+                  ' FILTER regex(str(?{COUNTRY_RELATION}), "president|prime_minister", "i").'
 GOVERNMENT_FILTER_TEMPLATE = '{{FORM1}} {COUNTRY_RELATION} ?{COUNTRY} .' \
                              '{{FORM2}} {COUNTRY_RELATION} ?{COUNTRY} .'
 LIST_FILTER_TEMPLATE = '?{CAPITAL} {COUNTRY_RELATION} ?{COUNTRY} .' \
                        ' FILTER regex(str(?{CAPITAL}), "{{STR}}", "i") .'
 PRESIDENT_FILTER_TEMPLATE = '?{PRESIDENT} {PRESIDENT_RELATION} ?{COUNTRY} .' \
-                       '?{PRESIDENT} {BORN_RELATION} {{COUNTRY}} .'
+                            '?{PRESIDENT} {BORN_RELATION} {{COUNTRY}} .'
 
 SPARQL_TEMPLATE = 'select {SELECT} ' \
                   'where {{{{' \
@@ -30,10 +30,8 @@ SPARQL_TEMPLATE = 'select {SELECT} ' \
 
 # TODO: 1. Fix _ issue --> added possible fix
 #       2. display correct format of output ---> added possible fix
-#       3. fixing encoding of serilize ---> added possible fix
-#       4. check if contains the string .. is case sensitive or not (free/Free)
-#       5. add population, area to extract_country_info
-#       6. check if president includes: chief executive, emperor, ...
+#       4. check if all queries are case insensitive?
+
 ####################################################################
 # SPARQL relations
 ####################################################################
@@ -225,49 +223,58 @@ class Ontology:
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
         country_name = doc.xpath("//h1[1]/text()")[0].replace(" ", "_")
+        re.sub(r'\(.*\)', '', country_name).split()
 
-        self.log.write(f"{path}:\n")
+        self.log.write(f"{path} ({country_name}):\n")
 
         if country_name[0] == '/':
             country_name = country_name[1:]
 
-        capital, form_of_gov, president_box, president_page, president_name, prime_minister_page, prime_minister_name = [
-                                                                                                                            ''] * 7
+        capital, form_of_gov, president_box, president_page, president_name, prime_minister_page, \
+        prime_minister_name, population, area = [''] * 9
+
         info_box = doc.xpath("//table[contains(@class, 'infobox') or contains(@class, 'vcard')][1]")[0]
 
         # extract fields
-        capital_box = info_box.xpath("//tr[./th[contains(text(), 'Capital')]]//a/text()")
+        # TODO: maybe add descendant-or-self::*
+        capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a/text()")
         if len(capital_box) > 0:
             capital = capital_box[0].replace(" ", "_")
 
         forms = []
-        form_of_gov = info_box.xpath("//tr[./th//a[contains(text(), 'Government')]]/td//a[not(../../sup)]//text()")
+        form_of_gov = info_box.xpath(".//tr[./th/descendant-or-self::*[contains(text(), 'Government')]]/td//a[not(../../sup)]//text()")
 
         for form in form_of_gov:
             forms.append(form.replace(" ", "_"))
 
-        # Emperor for japan
-        president_box = info_box.xpath(
-            "//tr[./th//a[starts-with(text(), 'President') or contains(text(), 'Chief Executive')]]/td")
+        president_box = info_box.xpath(".//tr[./th/descendant-or-self::*[text() = 'President']]/td")
         if len(president_box) > 0:
             president_page = president_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             president_name = president_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
 
-        # Chancellor for germany
-        prime_minister_box = info_box.xpath(
-            "//tr[./th//a[contains(text(), 'Prime Minister') or contains(text(), 'Premier')]]/td")
+        prime_minister_box = info_box.xpath(".//tr[./th//a[text() = 'Prime Minister']]/td")
         if len(prime_minister_box) > 0:
             prime_minister_page = prime_minister_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             prime_minister_name = prime_minister_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
 
+        population_box = info_box.xpath(
+            ".//tr[./th/descendant-or-self::*[contains(text(), 'Population')]]/following-sibling::tr[1]/td/text()")
+        if len(population_box) > 0:
+            population = population_box[0].strip().split()[0]
+
+        area_box = info_box.xpath(
+            ".//tr[./th/descendant-or-self::*[contains(text(), 'Area')]]/following-sibling::tr[1]/td/text()")
+        if len(area_box) > 0:
+            area = re.sub(r'\s+', '_', area_box[0] + ' squared')
+
         # declare entities and add connections to the graph
         if country_name != '':
-            COUNTRY = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{country_name}")
+            COUNTRY = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{country_name.strip()}")
 
             if capital != '':
-                CAPITAL = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{capital}")
+                CAPITAL = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{capital.strip()}")
                 self.ontology.add((CAPITAL, self.CAPITAL_OF, COUNTRY))
             else:
                 self.log.write("\t (-) Error: couldn't extract capital.\n")
@@ -291,6 +298,18 @@ class Ontology:
             else:
                 self.log.write("\t (-) Error: couldn't extract prime minister name.\n")
 
+            if population != '':
+                POPULATION = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{population}")
+                self.ontology.add((POPULATION, self.POPULATION_OF, COUNTRY))
+            else:
+                self.log.write("\t (-) Error: couldn't extract population.\n")
+
+            if area != '':
+                AREA = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{area}")
+                self.ontology.add((AREA, self.AREA_OF, COUNTRY))
+            else:
+                self.log.write("\t (-) Error: couldn't extract area.\n")
+
         else:
             self.log.write("\t (-) Error: couldn't extract country name.\n")
 
@@ -311,28 +330,29 @@ class Ontology:
         doc = lxml.html.fromstring(r.content)
         info_box = doc.xpath("//table[contains(@class, 'infobox')]")
         if len(info_box) == 0:
-            self.log.write("\tError: couldn't find infobox in president page.\n")
+            self.log.write("\t (-) Error: couldn't find infobox in president page.\n")
             return
 
         date_of_birth, place_of_birth = [''] * 2
         birth_box = info_box[0].xpath(".//tr[./th[contains(text(), 'Born')]]/td")
         if len(birth_box) > 0:
             date_of_birth = birth_box[0].xpath(".//span[contains(@class, 'bday')]/text()")
-            place_of_birth = birth_box[0].xpath(".//a//text()")
+            place_of_birth = birth_box[0].xpath("./text()")
 
-        if len(place_of_birth) > 0:
+        if len(place_of_birth) > 1:
             PERSON = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{name}")
+            # TODO: check this
             PLACE = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{place_of_birth[-1].replace(' ', '_')}")
             self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
         else:
-            self.log.write("\tError: couldn't extract president place of birth.\n")
+            self.log.write("\t (-) Error: couldn't extract president place of birth.\n")
 
         if len(date_of_birth) > 0:
             PERSON = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{name}")
             DATE = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{date_of_birth[0]}")
             self.ontology.add((PERSON, self.BIRTH_DATE, DATE))
         else:
-            self.log.write("\tError: couldn't extract president date of birth.\n")
+            self.log.write("\t (-) Error: couldn't extract president date of birth.\n")
 
 
 ####################################################################
