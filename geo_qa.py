@@ -23,14 +23,22 @@ LIST_FILTER_TEMPLATE = '?{CAPITAL} {COUNTRY_RELATION} ?{COUNTRY} .' \
 PRESIDENT_FILTER_TEMPLATE = '?{PRESIDENT} {PRESIDENT_RELATION} ?{COUNTRY} .' \
                             '?{PRESIDENT} {BORN_RELATION} {{COUNTRY}} .'
 
+POPULATION_FILTER_TEMPLATE = r'?{POPULATION} {COUNTRY_RELATION} ?{COUNTRY} .' \
+                             r' BIND(REPLACE(STR(?{POPULATION}), "(http://example.org/)|(,)", "", "i") AS ?x) .' \
+                             r' BIND(REPLACE(STR(?x), ",", "", "i") AS ?num) .' \
+                             r' FILTER (xsd:integer(?num) >= {{STR}}).'
+
+
 SPARQL_TEMPLATE = 'select {SELECT} ' \
                   'where {{{{' \
                   '{FILTERS}' \
                   '}}}}'
 
-# TODO: 1. Fix _ issue --> added possible fix
-#       2. display correct format of output ---> added possible fix
+#   TODO:
 #       4. check if all queries are case insensitive?
+#       5. check if approximately birth date needed to be parsed as well
+#       6. check if estimate population needed to be parsed
+#       7. (and problam with other_unit(**** km) ---> American_Samoa)
 
 ####################################################################
 # SPARQL relations
@@ -152,6 +160,14 @@ class Query:
                                            BORN_RELATION=SPARQL_RELATIONS['BIRTH_PLACE'],
                                            COUNTRY='c')
                                        ),
+            re.compile(r'How many countries have population greater than (?P<STR>\d+)\?'):
+                SPARQL_TEMPLATE.format(SELECT='(count(distinct ?c) as ?count )',
+                                       FILTERS=POPULATION_FILTER_TEMPLATE.format(
+                                           COUNTRY='c',
+                                           COUNTRY_RELATION=SPARQL_RELATIONS['POPULATION_OF'],
+                                           POPULATION='p')
+                                       ),
+
         }
 
     def query_to_SPARQL(self, query):
@@ -164,7 +180,7 @@ class Query:
             if match is None:
                 continue
             for key, val in match.groupdict().items():
-                val = val.replace(' ', '_')
+                val = val.strip().replace(' ', '_')
                 if key == "STR":
                     args[key] = val
                 else:
@@ -208,12 +224,11 @@ class Ontology:
     def build_ontology(self):
         r = requests.get(WIKI_BASE_PAGE)
         doc = lxml.html.fromstring(r.content)
-        for country_page in doc.xpath(
-                "(//table)[1]/tbody/tr/td[1]//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href"):
-            self.extract_country_info(country_page)
+        # "//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href"
+        for country_box in doc.xpath("(//table)[1]/tbody/tr/td[1]"):
+            self.extract_country_info(country_box.xpath(".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")[0])
 
         # save the ontology
-        # encoding = UTF-8
         self.log.close()
         self.ontology.serialize(self.ontology_name, format=self.ontology_name.split('.')[-1], encoding='utf-8')
 
@@ -223,7 +238,7 @@ class Ontology:
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
         country_name = doc.xpath("//h1[1]/text()")[0].replace(" ", "_")
-        re.sub(r'\(.*\)', '', country_name).split()
+        country_name = re.sub(r'\(.*\)', '', country_name).strip()
 
         self.log.write(f"{path} ({country_name}):\n")
 
@@ -239,42 +254,56 @@ class Ontology:
         # TODO: maybe add descendant-or-self::*
         capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a/text()")
         if len(capital_box) > 0:
-            capital = capital_box[0].replace(" ", "_")
+            capital = re.sub(r'\(.*\)', '', capital_box[0]).strip().replace(" ", "_")
 
         forms = []
         form_of_gov = info_box.xpath(".//tr[./th/descendant-or-self::*[contains(text(), 'Government')]]/td//a[not(../../sup)]//text()")
 
         for form in form_of_gov:
-            forms.append(form.replace(" ", "_"))
+            forms.append(form.strip().replace(" ", "_"))
 
         president_box = info_box.xpath(".//tr[./th/descendant-or-self::*[text() = 'President']]/td")
         if len(president_box) > 0:
             president_page = president_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
-            president_name = president_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
+            president_name = president_box[0].xpath(".//text()[1]")[0].strip().replace(" ", "_")
 
         prime_minister_box = info_box.xpath(".//tr[./th//a[text() = 'Prime Minister']]/td")
         if len(prime_minister_box) > 0:
             prime_minister_page = prime_minister_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
-            prime_minister_name = prime_minister_box[0].xpath(".//text()[1]")[0].replace(" ", "_")
+            prime_minister_name = prime_minister_box[0].xpath(".//text()[1]")[0].strip().replace(" ", "_")
 
+        # dealing with case that the number is on the same row (Channel_Islands)
         population_box = info_box.xpath(
-            ".//tr[./th/descendant-or-self::*[contains(text(), 'Population')]]/following-sibling::tr[1]/td/text()")
+            ".//tr[./th/descendant-or-self::*[contains(text(), 'Population')]]/td//text()")
+        if len(population_box) == 0:
+            population_box = info_box.xpath(
+                ".//tr[./th/descendant-or-self::*[contains(text(), 'Population')]]/following-sibling::tr[1]/td//text()")
         if len(population_box) > 0:
-            population = population_box[0].strip().split()[0]
+            # to get rid of '('
+            i = 0
+            while i < len(population_box):
+                if population_box[i] != '\n':
+                    break
+                i += 1
+            # ignore Estimate
+            if i < len(population_box) and '-' not in population_box[i]:
+                population = population_box[i].split()[0].strip().replace('.', ',')
+                print(population)
 
         area_box = info_box.xpath(
             ".//tr[./th/descendant-or-self::*[contains(text(), 'Area')]]/following-sibling::tr[1]/td/text()")
         if len(area_box) > 0:
-            area = re.sub(r'\s+', '_', area_box[0] + ' squared')
+            # deal with &nbsp
+            area = re.sub(r'\s+', '_', area_box[0].strip() + ' squared')
 
         # declare entities and add connections to the graph
         if country_name != '':
             COUNTRY = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{country_name.strip()}")
 
             if capital != '':
-                CAPITAL = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{capital.strip()}")
+                CAPITAL = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{capital}")
                 self.ontology.add((CAPITAL, self.CAPITAL_OF, COUNTRY))
             else:
                 self.log.write("\t (-) Error: couldn't extract capital.\n")
@@ -325,7 +354,6 @@ class Ontology:
 
     def extract_person_info(self, path, name):
         path = WIKI_INIT + path
-        print(f"{name}: {path}")
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
         info_box = doc.xpath("//table[contains(@class, 'infobox')]")
@@ -337,9 +365,9 @@ class Ontology:
         birth_box = info_box[0].xpath(".//tr[./th[contains(text(), 'Born')]]/td")
         if len(birth_box) > 0:
             date_of_birth = birth_box[0].xpath(".//span[contains(@class, 'bday')]/text()")
-            place_of_birth = birth_box[0].xpath("./text()")
+            place_of_birth = birth_box[0].xpath("./a/text()")
 
-        if len(place_of_birth) > 1:
+        if len(place_of_birth) > 0:
             PERSON = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{name}")
             # TODO: check this
             PLACE = rdflib.URIRef(f"{EXAMPLE_PREFIX}/{place_of_birth[-1].replace(' ', '_')}")
