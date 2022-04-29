@@ -3,6 +3,7 @@ import rdflib
 import lxml.html
 import defines as defs
 import re
+import os
 
 
 class Ontology:
@@ -14,6 +15,7 @@ class Ontology:
         self.log = open('log.txt', 'w')
         self.ontology = rdflib.Graph()
         self.ontology_name = ontology_name
+        self.countries = []
         # add relations
         self.PRESIDENT_OF = rdflib.URIRef(defs.SPARQL_RELATIONS['PRESIDENT_OF'][1:-1])
         self.PRIME_MINISTER_OF = rdflib.URIRef(defs.SPARQL_RELATIONS['PRIME_MINISTER_OF'][1:-1])
@@ -27,10 +29,13 @@ class Ontology:
     def build_ontology(self):
         r = requests.get(defs.WIKI_BASE_PAGE)
         doc = lxml.html.fromstring(r.content)
-        # "//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href"
+        # create countries list
         for country_box in doc.xpath("(//table)[1]/tbody/tr/td[1]"):
-            self.extract_country_info(
+            self.countries.append(
                 country_box.xpath(".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")[0])
+
+        for country_path in self.countries:
+            self.extract_country_info(country_path)
 
         # save the ontology
         self.log.close()
@@ -41,13 +46,10 @@ class Ontology:
         print(f'path {path}')
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
-        country_name = doc.xpath("//h1[1]/text()")[0].replace(" ", "_")
-        country_name = re.sub(r'\(.*\)', '', country_name).strip()
+        # TODO: extract name from URL!
+        country_name = os.path.split(path)[1].replace(" ", "_")
 
         self.log.write(f"{path} ({country_name}):\n")
-
-        if country_name[0] == '/':
-            country_name = country_name[1:]
 
         capital, form_of_gov, president_box, president_page, president_name, prime_minister_page, \
         prime_minister_name, population, area = [''] * 9
@@ -56,28 +58,28 @@ class Ontology:
 
         # extract fields
         # TODO: maybe add descendant-or-self::*
-        capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a/text()")
+        capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a/@href")
         if len(capital_box) > 0:
-            capital = re.sub(r'\(.*\)', '', capital_box[0]).strip().replace(" ", "_")
+            capital = os.path.split(capital_box[0])[1]
 
         forms = []
         form_of_gov = info_box.xpath(
-            ".//tr[./th/descendant-or-self::*[contains(text(), 'Government')]]/td//a[not(../../sup)]//text()")
+            ".//tr[./th/descendant-or-self::*[contains(text(), 'Government')]]/td//a[not(../../sup)]//@href")
 
         for form in form_of_gov:
-            forms.append(form.strip().replace(" ", "_"))
+            forms.append(os.path.split(form)[1])
 
         president_box = info_box.xpath(".//tr[./th/descendant-or-self::*[text() = 'President']]/td")
         if len(president_box) > 0:
             president_page = president_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
-            president_name = president_box[0].xpath(".//text()[1]")[0].strip().replace(" ", "_")
+            president_name = os.path.split(president_page[0])[1]
 
         prime_minister_box = info_box.xpath(".//tr[./th//a[text() = 'Prime Minister']]/td")
         if len(prime_minister_box) > 0:
             prime_minister_page = prime_minister_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
-            prime_minister_name = prime_minister_box[0].xpath(".//text()[1]")[0].strip().replace(" ", "_")
+            prime_minister_name = os.path.split(prime_minister_page[0])[1]
 
         # dealing with case that the number is on the same row (Channel_Islands)
         population_box = info_box.xpath(
@@ -93,20 +95,19 @@ class Ontology:
                     break
                 i += 1
             # ignore Estimate
-            # TODO: check this
+            # TODO: handle with Eritrea
             if i < len(population_box) and '-' not in population_box[i]:
                 population = population_box[i].split()[0].strip().replace('.', ',')
-                print(population)
 
         area_box = info_box.xpath(
             ".//tr[./th/descendant-or-self::*[contains(text(), 'Area')]]/following-sibling::tr[1]/td/text()")
         if len(area_box) > 0:
             # deal with &nbsp
-            area = re.sub(r'\s+', '_', area_box[0].strip() + ' squared')
+            area = re.sub(r'[^0-9,\.\-]', '', area_box[0].split('(')[-1].strip()) + '_km_squared'
 
         # declare entities and add connections to the graph
         if country_name != '':
-            COUNTRY = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{country_name.strip()}")
+            COUNTRY = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{country_name}")
 
             if capital != '':
                 CAPITAL = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{capital}")
@@ -167,17 +168,29 @@ class Ontology:
             self.log.write("\t (-) Error: couldn't find infobox in president page.\n")
             return
 
-        date_of_birth, place_of_birth = [''] * 2
+        date_of_birth, place_of_birth, place_of_birth_href, place_of_birth_text = [''] * 4
         birth_box = info_box[0].xpath(".//tr[./th[contains(text(), 'Born')]]/td")
         if len(birth_box) > 0:
             date_of_birth = birth_box[0].xpath(".//span[contains(@class, 'bday')]/text()")
-            place_of_birth = birth_box[0].xpath("./a/text()")
+            place_of_birth_href = birth_box[0].xpath("./a/@href")
+            place_of_birth_text = birth_box[0].xpath("./text()")
 
-        if len(place_of_birth) > 0:
-            PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{name}")
-            # TODO: check this
-            PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{place_of_birth[-1].replace(' ', '_')}")
-            self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+        # option 1: extract from href
+        if len(place_of_birth_href) > 0:
+            # check of country is in the list of countries we work with
+            if place_of_birth_href[-1] in self.countries:
+                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{name}")
+                place_of_birth = os.path.split(place_of_birth_href[-1])[1]
+                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{place_of_birth}")
+                self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+
+        # option 2: extract from text
+        if len(place_of_birth) == 0 and len(place_of_birth_text) > 0:
+            place_of_birth = place_of_birth_text[-1].replace(',', '').strip().replace(" ", "_")
+            if '/wiki/' + place_of_birth in self.countries:
+                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{name}")
+                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{place_of_birth}")
+                self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
         else:
             self.log.write("\t (-) Error: couldn't extract president place of birth.\n")
 
