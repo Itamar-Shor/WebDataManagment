@@ -135,14 +135,15 @@ class Ontology:
                 self.log.write("\t (-) Error: couldn't extract prime minister name.\n")
 
             if population != '':
-                POPULATION = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{population}")
-                self.ontology.add((POPULATION, self.POPULATION_OF, COUNTRY))
+                print(population)
+                POPULATION = rdflib.Literal(population)
+                self.ontology.add((COUNTRY, self.POPULATION_OF, POPULATION))
             else:
                 self.log.write("\t (-) Error: couldn't extract population.\n")
 
             if area != '':
-                AREA = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{area}")
-                self.ontology.add((AREA, self.AREA_OF, COUNTRY))
+                AREA = rdflib.Literal(area)
+                self.ontology.add((COUNTRY, self.AREA_OF, AREA))
             else:
                 self.log.write("\t (-) Error: couldn't extract area.\n")
 
@@ -196,7 +197,7 @@ class Ontology:
 
         if len(date_of_birth) > 0:
             PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{name}")
-            DATE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{date_of_birth[0]}")
+            DATE = rdflib.Literal(date_of_birth[0])
             self.ontology.add((PERSON, self.BIRTH_DATE, DATE))
         else:
             self.log.write("\t (-) Error: couldn't extract president date of birth.\n")

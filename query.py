@@ -25,13 +25,13 @@ class Query:
                                             )),
             re.compile(r'What is the population of (?P<COUNTRY>.+)\?'):
                 defs.SPARQL_TEMPLATE.format(SELECT='?e',
-                                            FILTERS=defs.COUNTRY_FILTER_TEMPLATE.format(
+                                            FILTERS=defs.NUMERIC_FILTER_TEMPLATE.format(
                                                 VAR='e',
                                                 RELATION=defs.SPARQL_RELATIONS['POPULATION_OF']
                                             )),
             re.compile(r'What is the area of (?P<COUNTRY>.+)\?'):
                 defs.SPARQL_TEMPLATE.format(SELECT='?e',
-                                            FILTERS=defs.COUNTRY_FILTER_TEMPLATE.format(
+                                            FILTERS=defs.NUMERIC_FILTER_TEMPLATE.format(
                                                 VAR='e',
                                                 RELATION=defs.SPARQL_RELATIONS['AREA_OF']
                                             )),

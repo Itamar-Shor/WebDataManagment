@@ -10,6 +10,7 @@ WIKI_INIT = r'https://en.wikipedia.org'
 # SPARQL filters
 ####################################################################
 COUNTRY_FILTER_TEMPLATE = '?{VAR} {RELATION} {{COUNTRY}} .'
+NUMERIC_FILTER_TEMPLATE = '{{COUNTRY}} {RELATION} ?{VAR} .'
 COUNTRY_PERSONAL_FILTER_TEMPLATE = '?{VAR_PERSON} {COUNTRY_RELATION} {{COUNTRY}} .' \
                                    '?{VAR_PERSON} {REQ_RELATION} ?{REQ_VAR} .'
 ENTITY_TEMPLATE = '{{ENTITY}} ?{COUNTRY_RELATION} ?{COUNTRY} .' \
@@ -21,9 +22,8 @@ LIST_FILTER_TEMPLATE = '?{CAPITAL} {COUNTRY_RELATION} ?{COUNTRY} .' \
 PRESIDENT_FILTER_TEMPLATE = '?{PRESIDENT} {PRESIDENT_RELATION} ?{COUNTRY} .' \
                             '?{PRESIDENT} {BORN_RELATION} {{COUNTRY}} .'
 
-POPULATION_FILTER_TEMPLATE = r'?{POPULATION} {COUNTRY_RELATION} ?{COUNTRY} .' \
-                             r' BIND(REPLACE(STR(?{POPULATION}), "(http://example.org/)|(,)", "", "i") AS ?x) .' \
-                             r' BIND(REPLACE(STR(?x), ",", "", "i") AS ?num) .' \
+POPULATION_FILTER_TEMPLATE = r'?{COUNTRY} {COUNTRY_RELATION} ?{POPULATION} .' \
+                             r' BIND(REPLACE(?{POPULATION}, ",", "") AS ?num) .' \
                              r' FILTER (xsd:integer(?num) >= {{STR}}).'
 
 

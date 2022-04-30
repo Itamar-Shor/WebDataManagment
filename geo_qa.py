@@ -4,6 +4,7 @@ from query import Query
 from ontology import Ontology
 from test import test
 
+
 #   TODO:
 #       6. check if estimate population needed to be parsed
 #       10. check if need to encode/decode to utf-8
