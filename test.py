@@ -1,4 +1,5 @@
 from query import Query
+from urllib.parse import unquote
 
 qa = {
     "Who is the president of China?": "Xi Jinping",
@@ -22,14 +23,14 @@ qa = {
     "What is the capital of Saint Helena, Ascension and Tristan da Cunha?": "Jamestown, Saint Helena",
     "What is the capital of Greenland?": "Nuuk",
     "List all countries whose capital name contains the string hi": "Bhutan, India, Moldova, Sint Maarten, United States",
-    "List all countries whose capital name contains the string free": "Sierra leone",
+    "List all countries whose capital name contains the string free": "Sierra Leone",
     "List all countries whose capital name contains the string alo": "Niue, Tonga",
     "List all countries whose capital name contains the string baba": "Eswatini, Ethiopia",
     "How many Absolute monarchy are also Unitary state?": "5",
     "How many Dictatorship are also Presidential system?": "5",
     "How many Dictatorship are also Authoritarian?": "3",
     "How many presidents were born in Iceland?": "1",
-    "How many presidents were born in Republic of Ireland?": "1",
+    "How many presidents were born in Republic of Ireland?": "0",
     "When was the president of Fiji born?": "1964-04-20",
     "When was the president of United States born?": "1942-11-20",
     "Where was the president of Indonesia born?": "Indonesia",
@@ -48,7 +49,7 @@ def test(ontology):
         results = query_handler.query(q)
         a = ''
         if results is not None:
-            a = ', '.join(sorted([' '.join([item.split('/')[-1].replace('_', ' ') for item in r]) for r in results]))
+            a = ', '.join(sorted([' '.join([unquote(item.split('/')[-1], encoding='utf-8').replace('_', ' ') for item in r]) for r in results]))
         if a != qa[q]:
             nof_err += 1
             print(f"({nof_err}) Error: question={q}.\n\texpected= {qa[q]}.\n\tactual= {a}.")

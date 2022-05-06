@@ -1,6 +1,7 @@
 import re
 import rdflib
 import defines as defs
+from urllib.parse import quote
 
 
 class Query:
@@ -126,7 +127,8 @@ class Query:
             if match is None:
                 continue
             for key, val in match.groupdict().items():
-                val = val.strip().replace(' ', '_')
+                # quote to match the representation in the ontology
+                val = quote(val.strip().replace(' ', '_'), encoding='utf-8')
                 if key == "STR":
                     args[key] = val
                 else:

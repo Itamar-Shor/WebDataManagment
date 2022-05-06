@@ -4,6 +4,11 @@ import lxml.html
 import defines as defs
 import re
 import os
+from urllib.parse import quote, unquote
+
+
+def fix_encoding(s, enc='utf-8'):
+    return quote(unquote(s, encoding=enc), encoding=enc)
 
 
 class Ontology:
@@ -99,37 +104,42 @@ class Ontology:
             if i < len(population_box) and '-' not in population_box[i]:
                 population = population_box[i].split()[0].strip().replace('.', ',')
 
+        # dealing with case that the number is on the same row (Channel_Islands)
         area_box = info_box.xpath(
-            ".//tr[./th/descendant-or-self::*[contains(text(), 'Area')]]/following-sibling::tr[1]/td/text()")
+            ".//tr[./th/descendant-or-self::*[contains(text(), 'Area')]]/td/text()")
+        if len(area_box) == 0:
+            area_box = info_box.xpath(
+                ".//tr[./th/descendant-or-self::*[contains(text(), 'Area')]]/following-sibling::tr[1]/td/text()")
+
         if len(area_box) > 0:
             # deal with &nbsp
             area = re.sub(r'[^0-9,\.\-]', '', area_box[0].split('(')[-1].strip()) + '_km_squared'
 
         # declare entities and add connections to the graph
         if country_name != '':
-            COUNTRY = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{country_name}")
+            COUNTRY = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(country_name)}")
 
             if capital != '':
-                CAPITAL = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{capital}")
+                CAPITAL = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(capital)}")
                 self.ontology.add((CAPITAL, self.CAPITAL_OF, COUNTRY))
             else:
                 self.log.write("\t (-) Error: couldn't extract capital.\n")
 
             if len(form_of_gov) > 0:
                 for form in forms:
-                    FORM_OF_GOV = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{form}")
+                    FORM_OF_GOV = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(form)}")
                     self.ontology.add((FORM_OF_GOV, self.FORM_OF_GOV_IN, COUNTRY))
             else:
                 self.log.write("\t (-) Error: couldn't extract form of government.\n")
 
             if president_name != '':
-                PRESIDENT = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{president_name}")
+                PRESIDENT = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(president_name)}")
                 self.ontology.add((PRESIDENT, self.PRESIDENT_OF, COUNTRY))
             else:
                 self.log.write("\t (-) Error: couldn't extract president name.\n")
 
             if prime_minister_name != '':
-                PRIME_MINISTER = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{prime_minister_name}")
+                PRIME_MINISTER = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(prime_minister_name)}")
                 self.ontology.add((PRIME_MINISTER, self.PRIME_MINISTER_OF, COUNTRY))
             else:
                 self.log.write("\t (-) Error: couldn't extract prime minister name.\n")
@@ -180,23 +190,23 @@ class Ontology:
         if len(place_of_birth_href) > 0:
             # check of country is in the list of countries we work with
             if place_of_birth_href[-1] in self.countries:
-                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{name}")
+                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
                 place_of_birth = os.path.split(place_of_birth_href[-1])[1]
-                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{place_of_birth}")
+                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
                 self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
 
         # option 2: extract from text
         if len(place_of_birth) == 0 and len(place_of_birth_text) > 0:
             place_of_birth = place_of_birth_text[-1].replace(',', '').strip().replace(" ", "_")
             if '/wiki/' + place_of_birth in self.countries:
-                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{name}")
-                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{place_of_birth}")
+                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
+                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
                 self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
-        else:
+        if len(place_of_birth) == 0:
             self.log.write("\t (-) Error: couldn't extract president place of birth.\n")
 
         if len(date_of_birth) > 0:
-            PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{name}")
+            PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
             DATE = rdflib.Literal(date_of_birth[0])
             self.ontology.add((PERSON, self.BIRTH_DATE, DATE))
         else:
