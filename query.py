@@ -10,7 +10,7 @@ class Query:
     """
 
     def __init__(self, ontology):
-        self.ontology = rdflib.Graph().parse(ontology)
+        self.ontology = rdflib.Graph().parse(ontology,format=ontology.split('.')[-1])
         self.query2SPARQL_d = {
             re.compile(r'Who is the president of (?P<COUNTRY>.+)\?'):
                 defs.SPARQL_TEMPLATE.format(SELECT='?e',

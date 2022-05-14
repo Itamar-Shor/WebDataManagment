@@ -10,6 +10,13 @@ from urllib.parse import quote, unquote
 def fix_encoding(s, enc='utf-8'):
     return quote(unquote(s, encoding=enc), encoding=enc)
 
+def is_utf(string):
+    try:
+        string.encode('utf-8')
+        #print( f'{string} is UTF-8, length {len(string)} bytes')
+    except UnicodeError:
+        print( f'{string} is not UTF-8')
+    
 
 class Ontology:
     """
@@ -46,6 +53,7 @@ class Ontology:
         self.log.close()
         self.ontology.serialize(self.ontology_name, format=self.ontology_name.split('.')[-1], encoding='utf-8')
 
+    
     def extract_country_info(self, path):
         path = defs.WIKI_INIT + path
         print(f'path {path}')
@@ -53,6 +61,7 @@ class Ontology:
         doc = lxml.html.fromstring(r.content)
         # TODO: extract name from URL!
         country_name = os.path.split(path)[1].replace(" ", "_")
+        is_utf(country_name)
 
         self.log.write(f"{path} ({country_name}):\n")
 
@@ -65,9 +74,8 @@ class Ontology:
         capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a/@href")
         if len(capital_box) > 0:
             capital = os.path.split(capital_box[0])[1]
-            if 'De_jure' in capital:
+            if 'De_jure' in capital and len(capital_box) > 1:
                 capital = os.path.split(capital_box[1])[1]
-                print('de jure:', country_name)
 
         forms = []
         # TODO: check if some are text? what is the purpose of [not(../../sup)]?
@@ -77,13 +85,14 @@ class Ontology:
         for form in form_of_gov:
             # to fix url with List_of#<actual_form> (see south africa)
             forms.append(os.path.split(form)[1].split('#')[-1])
-
+        
         president_box = info_box.xpath(".//tr[./th/descendant-or-self::*[text() = 'President']]/td")
         if len(president_box) > 0:
             president_page = president_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             if len(president_page) > 0:
                 president_name = os.path.split(president_page[0])[1]
+                is_utf(president_name)
 
         prime_minister_box = info_box.xpath(".//tr[./th//a[text() = 'Prime Minister']]/td")
         if len(prime_minister_box) > 0:
@@ -91,6 +100,7 @@ class Ontology:
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             if len(prime_minister_page) > 0:
                 prime_minister_name = os.path.split(prime_minister_page[0])[1]
+                is_utf(prime_minister_name)
 
         # dealing with case that the number is on the same row (Channel_Islands)
         population_box = info_box.xpath(
