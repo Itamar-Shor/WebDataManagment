@@ -62,29 +62,35 @@ class Ontology:
         info_box = doc.xpath("//table[contains(@class, 'infobox') or contains(@class, 'vcard')][1]")[0]
 
         # extract fields
-        # TODO: maybe add descendant-or-self::*
         capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a/@href")
         if len(capital_box) > 0:
             capital = os.path.split(capital_box[0])[1]
+            if 'De_jure' in capital:
+                capital = os.path.split(capital_box[1])[1]
+                print('de jure:', country_name)
 
         forms = []
+        # TODO: check if some are text? what is the purpose of [not(../../sup)]?
         form_of_gov = info_box.xpath(
             ".//tr[./th/descendant-or-self::*[contains(text(), 'Government')]]/td//a[not(../../sup)]//@href")
 
         for form in form_of_gov:
-            forms.append(os.path.split(form)[1])
+            # to fix url with List_of#<actual_form> (see south africa)
+            forms.append(os.path.split(form)[1].split('#')[-1])
 
         president_box = info_box.xpath(".//tr[./th/descendant-or-self::*[text() = 'President']]/td")
         if len(president_box) > 0:
             president_page = president_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
-            president_name = os.path.split(president_page[0])[1]
+            if len(president_page) > 0:
+                president_name = os.path.split(president_page[0])[1]
 
         prime_minister_box = info_box.xpath(".//tr[./th//a[text() = 'Prime Minister']]/td")
         if len(prime_minister_box) > 0:
             prime_minister_page = prime_minister_box[0].xpath(
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
-            prime_minister_name = os.path.split(prime_minister_page[0])[1]
+            if len(prime_minister_page) > 0:
+                prime_minister_name = os.path.split(prime_minister_page[0])[1]
 
         # dealing with case that the number is on the same row (Channel_Islands)
         population_box = info_box.xpath(
@@ -96,12 +102,13 @@ class Ontology:
             # to get rid of '('
             i = 0
             while i < len(population_box):
-                if population_box[i] != '\n':
+                if not population_box[i].isspace():
                     break
                 i += 1
             # ignore Estimate
             # TODO: handle with Eritrea
             if i < len(population_box) and '-' not in population_box[i]:
+                # print(f"i={i}, len={len(population_box)}, '{population_box[i]}', {len(population_box[i])}")
                 population = population_box[i].split()[0].strip().replace('.', ',')
 
         # dealing with case that the number is on the same row (Channel_Islands)
@@ -145,7 +152,6 @@ class Ontology:
                 self.log.write("\t (-) Error: couldn't extract prime minister name.\n")
 
             if population != '':
-                print(population)
                 POPULATION = rdflib.Literal(population)
                 self.ontology.add((COUNTRY, self.POPULATION_OF, POPULATION))
             else:
@@ -202,6 +208,14 @@ class Ontology:
                 PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
                 PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
                 self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+            else:
+                # try to find pattern (now <country>)
+                match = re.search(r'(?P<c>\w+)\s*\)', place_of_birth)
+                if match and '/wiki/' + match.group('c') in self.countries:
+                    place_of_birth = match.group('c')
+                    PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
+                    PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
+                    self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
         if len(place_of_birth) == 0:
             self.log.write("\t (-) Error: couldn't extract president place of birth.\n")
 

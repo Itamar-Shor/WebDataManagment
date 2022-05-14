@@ -2,6 +2,7 @@ https://en.wikipedia.org/wiki/China (China):
 	 (-) Error: couldn't extract prime minister name.
 	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/India (India):
+	 (-) Error: couldn't extract president place of birth.
 https://en.wikipedia.org/wiki/United_States (United_States):
 	 (-) Error: couldn't extract prime minister name.
 	 (-) Error: couldn't extract prime minister page.
@@ -22,7 +23,6 @@ https://en.wikipedia.org/wiki/Bangladesh (Bangladesh):
 	 (-) Error: couldn't extract president place of birth.
 https://en.wikipedia.org/wiki/Russia (Russia):
 	 (-) Error: couldn't extract president place of birth.
-	 (-) Error: couldn't extract president place of birth.
 https://en.wikipedia.org/wiki/Mexico (Mexico):
 	 (-) Error: couldn't extract prime minister name.
 	 (-) Error: couldn't extract prime minister page.
@@ -39,6 +39,7 @@ https://en.wikipedia.org/wiki/Philippines (Philippines):
 https://en.wikipedia.org/wiki/Egypt (Egypt):
 	 (-) Error: couldn't extract president place of birth.
 https://en.wikipedia.org/wiki/Vietnam (Vietnam):
+	 (-) Error: couldn't extract president place of birth.
 	 (-) Error: couldn't extract president place of birth.
 https://en.wikipedia.org/wiki/Democratic_Republic_of_the_Congo (Democratic_Republic_of_the_Congo):
 	 (-) Error: couldn't extract president place of birth.
@@ -167,7 +168,10 @@ https://en.wikipedia.org/wiki/Niger (Niger):
 	 (-) Error: couldn't extract president date of birth.
 https://en.wikipedia.org/wiki/Sri_Lanka (Sri_Lanka):
 	 (-) Error: couldn't extract president place of birth.
+	 (-) Error: couldn't extract president place of birth.
 https://en.wikipedia.org/wiki/Burkina_Faso (Burkina_Faso):
+	 (-) Error: couldn't extract president name.
+	 (-) Error: couldn't extract president page.
 https://en.wikipedia.org/wiki/Mali (Mali):
 	 (-) Error: couldn't extract president date of birth.
 	 (-) Error: couldn't extract president place of birth.
@@ -216,6 +220,8 @@ https://en.wikipedia.org/wiki/Zimbabwe (Zimbabwe):
 	 (-) Error: couldn't extract prime minister name.
 	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/Guinea (Guinea):
+	 (-) Error: couldn't extract president name.
+	 (-) Error: couldn't extract president page.
 	 (-) Error: couldn't find infobox in president page.
 https://en.wikipedia.org/wiki/Rwanda (Rwanda):
 https://en.wikipedia.org/wiki/Benin (Benin):
@@ -258,6 +264,8 @@ https://en.wikipedia.org/wiki/Sweden (Sweden):
 	 (-) Error: couldn't extract president name.
 	 (-) Error: couldn't extract president page.
 https://en.wikipedia.org/wiki/United_Arab_Emirates (United_Arab_Emirates):
+	 (-) Error: couldn't extract prime minister name.
+	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/Honduras (Honduras):
 	 (-) Error: couldn't extract prime minister name.
 	 (-) Error: couldn't extract prime minister page.
@@ -367,7 +375,9 @@ https://en.wikipedia.org/wiki/Panama (Panama):
 	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/Kuwait (Kuwait):
 	 (-) Error: couldn't extract president name.
+	 (-) Error: couldn't extract prime minister name.
 	 (-) Error: couldn't extract president page.
+	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/Croatia (Croatia):
 	 (-) Error: couldn't extract president place of birth.
 	 (-) Error: couldn't extract president place of birth.
@@ -401,6 +411,7 @@ https://en.wikipedia.org/wiki/Puerto_Rico (Puerto_Rico):
 	 (-) Error: couldn't extract prime minister name.
 	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/Albania (Albania):
+	 (-) Error: couldn't extract president place of birth.
 	 (-) Error: couldn't extract president place of birth.
 https://en.wikipedia.org/wiki/Qatar (Qatar):
 	 (-) Error: couldn't extract president name.
@@ -638,7 +649,6 @@ https://en.wikipedia.org/wiki/Bermuda (Bermuda):
 	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/Marshall_Islands (Marshall_Islands):
 	 (-) Error: couldn't extract prime minister name.
-	 (-) Error: couldn't extract president date of birth.
 	 (-) Error: couldn't extract prime minister page.
 https://en.wikipedia.org/wiki/Greenland (Greenland):
 	 (-) Error: couldn't extract president name.

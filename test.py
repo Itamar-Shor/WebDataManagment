@@ -28,7 +28,7 @@ qa = {
     "List all countries whose capital name contains the string baba": "Eswatini, Ethiopia",
     "How many Absolute monarchy are also Unitary state?": "5",
     "How many Dictatorship are also Presidential system?": "5",
-    "How many Dictatorship are also Authoritarian?": "3",
+    "How many Dictatorship are also Authoritarian?": "2",
     "How many presidents were born in Iceland?": "1",
     "How many presidents were born in Republic of Ireland?": "0",
     "When was the president of Fiji born?": "1964-04-20",
