@@ -199,17 +199,18 @@ class Ontology:
         birth_box = info_box[0].xpath(".//tr[./th[contains(text(), 'Born')]]/td")
         if len(birth_box) > 0:
             date_of_birth = birth_box[0].xpath(".//span[contains(@class, 'bday')]/text()")
-            place_of_birth_href = birth_box[0].xpath("./a/@href")
+            place_of_birth_href = birth_box[0].xpath(".//a/@href")
             place_of_birth_text = birth_box[0].xpath("./text()")
 
         # option 1: extract from href
         if len(place_of_birth_href) > 0:
             # check of country is in the list of countries we work with
-            if place_of_birth_href[-1] in self.countries:
-                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
-                place_of_birth = os.path.split(place_of_birth_href[-1])[1]
-                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
-                self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+            for place in place_of_birth_href:
+                if place in self.countries:
+                    PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
+                    place_of_birth = os.path.split(place)[1]
+                    PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
+                    self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
 
         # option 2: extract from text
         if len(place_of_birth) == 0 and len(place_of_birth_text) > 0:
