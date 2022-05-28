@@ -8,7 +8,6 @@ from urllib.parse import unquote
 
 #   TODO:
 #       12. check of os.path.sep is needed
-#       17. birth place fixes (like Volodymyr_Zelenskyy and Ukraine)
 
 
 def main():

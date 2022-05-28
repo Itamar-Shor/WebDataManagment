@@ -15,7 +15,7 @@ qa = {
     "What is the area of Guadeloupe?": "1,628 km squared",
     "What is the form of government in Argentina?": "Federal republic, Presidential system, Republic",
     "What is the form of government in Sweden?": "Constitutional monarchy, Parliamentary system, Unitary state",
-    "What is the form of government in Bahrain?": "Parliamentary, Semi-constitutional monarchy, Unitary state",
+    "What is the form of government in Bahrain?": "Islamic state, Parliamentary, Semi-constitutional monarchy, Unitary state",
     "What is the form of government in North Macedonia?": "Parliamentary republic, Unitary state",
     "What is the capital of Burundi?": "Gitega",
     "What is the capital of Mongolia?": "Ulaanbaatar",

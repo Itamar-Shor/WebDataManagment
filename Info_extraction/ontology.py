@@ -204,9 +204,9 @@ class Ontology:
         # option 2: extract from text
         if len(place_of_birth) == 0 and len(place_of_birth_text) > 0:
             for place in place_of_birth_text:
-                place = place.replace(',', '').strip().replace(" ", "_")
-                if '/wiki/' + place in self.countries:
-                    place_of_birth = place
+                place_parsed = place.replace(',', '').strip().replace(" ", "_")
+                if '/wiki/' + place_parsed in self.countries:
+                    place_of_birth = place_parsed
                     PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
                     PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
                     self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
