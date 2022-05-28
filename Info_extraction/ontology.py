@@ -10,13 +10,6 @@ from urllib.parse import quote, unquote
 def fix_encoding(s, enc='utf-8'):
     return quote(unquote(s, encoding=enc), encoding=enc)
 
-def is_utf(string):
-    try:
-        string.encode('utf-8')
-        #print( f'{string} is UTF-8, length {len(string)} bytes')
-    except UnicodeError:
-        print( f'{string} is not UTF-8')
-    
 
 class Ontology:
     """
@@ -59,9 +52,7 @@ class Ontology:
         print(f'path {path}')
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
-        # TODO: extract name from URL!
         country_name = os.path.split(path)[1].replace(" ", "_")
-        is_utf(country_name)
 
         self.log.write(f"{path} ({country_name}):\n")
 
@@ -78,7 +69,6 @@ class Ontology:
                 capital = os.path.split(capital_box[1])[1]
 
         forms = []
-        # TODO: check if some are text? what is the purpose of [not(../../sup)]?
         form_of_gov = info_box.xpath(
             ".//tr[./th/descendant-or-self::*[contains(text(), 'Government')]]/td//a[not(../../sup)]//@href")
 
@@ -92,7 +82,6 @@ class Ontology:
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             if len(president_page) > 0:
                 president_name = os.path.split(president_page[0])[1]
-                is_utf(president_name)
 
         prime_minister_box = info_box.xpath(".//tr[./th//a[text() = 'Prime Minister']]/td")
         if len(prime_minister_box) > 0:
@@ -100,7 +89,6 @@ class Ontology:
                 ".//a[contains(@href, '/wiki/') and not(contains(@href, ':'))]/@href")
             if len(prime_minister_page) > 0:
                 prime_minister_name = os.path.split(prime_minister_page[0])[1]
-                is_utf(prime_minister_name)
 
         # dealing with case that the number is on the same row (Channel_Islands)
         population_box = info_box.xpath(
@@ -116,7 +104,7 @@ class Ontology:
                     break
                 i += 1
             # ignore Estimate
-            # TODO: handle with Eritrea
+
             if i < len(population_box) and '-' not in population_box[i]:
                 # print(f"i={i}, len={len(population_box)}, '{population_box[i]}', {len(population_box[i])}")
                 population = population_box[i].split()[0].strip().replace('.', ',')
@@ -200,7 +188,7 @@ class Ontology:
         if len(birth_box) > 0:
             date_of_birth = birth_box[0].xpath(".//span[contains(@class, 'bday')]/text()")
             place_of_birth_href = birth_box[0].xpath(".//a/@href")
-            place_of_birth_text = birth_box[0].xpath("./text()")
+            place_of_birth_text = birth_box[0].xpath(".//text()")
 
         # option 1: extract from href
         if len(place_of_birth_href) > 0:
@@ -211,22 +199,28 @@ class Ontology:
                     place_of_birth = os.path.split(place)[1]
                     PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
                     self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+                    break
 
         # option 2: extract from text
         if len(place_of_birth) == 0 and len(place_of_birth_text) > 0:
-            place_of_birth = place_of_birth_text[-1].replace(',', '').strip().replace(" ", "_")
-            if '/wiki/' + place_of_birth in self.countries:
-                PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
-                PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
-                self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
-            else:
-                # try to find pattern (now <country>)
-                match = re.search(r'(?P<c>\w+)\s*\)', place_of_birth)
-                if match and '/wiki/' + match.group('c') in self.countries:
-                    place_of_birth = match.group('c')
+            for place in place_of_birth_text:
+                place = place.replace(',', '').strip().replace(" ", "_")
+                if '/wiki/' + place in self.countries:
+                    place_of_birth = place
                     PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
                     PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
                     self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+                    break
+                else:
+                    # try to find pattern (now <country>)
+                    match = re.search(r'\s(?P<c>\w+)\s*\)', place)
+                    if match and '/wiki/' + match.group('c') in self.countries:
+                        place_of_birth = match.group('c')
+                        PERSON = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(name)}")
+                        PLACE = rdflib.URIRef(f"{defs.EXAMPLE_PREFIX}/{fix_encoding(place_of_birth)}")
+                        self.ontology.add((PERSON, self.BIRTH_PLACE, PLACE))
+                        break
+
         if len(place_of_birth) == 0:
             self.log.write("\t (-) Error: couldn't extract president place of birth.\n")
 

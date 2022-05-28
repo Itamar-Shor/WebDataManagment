@@ -7,14 +7,8 @@ from urllib.parse import unquote
 
 
 #   TODO:
-#       6. check if estimate population needed to be parsed
 #       12. check of os.path.sep is needed
-#       13. what to do if the a/text() is good but the a/@href is something else??
-#       14. the entity name shoud be identical to the URL ---> remove unquote??
-#       15. capital of switzerlamd (see forum)
-#       16. deal with weird url of form_of_gov - # (south-africa)
 #       17. birth place fixes (like Volodymyr_Zelenskyy and Ukraine)
-#       18. Dominican republic -- somethimes get index error in population = population_box[i].split()[0].strip().replace('.', ',')
 
 
 def main():

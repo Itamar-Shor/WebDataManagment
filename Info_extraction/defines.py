@@ -2,7 +2,7 @@
 # URLs
 ####################################################################
 EXAMPLE_PREFIX = r'http://example.org'
-ONTOLOGY_NAME = 'ontology.nt'
+ONTOLOGY_NAME = 'Info_extraction//ontology.nt'
 WIKI_BASE_PAGE = r'https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)'
 WIKI_INIT = r'https://en.wikipedia.org'
 
@@ -18,7 +18,7 @@ ENTITY_TEMPLATE = '{{ENTITY}} ?{COUNTRY_RELATION} ?{COUNTRY} .' \
 GOVERNMENT_FILTER_TEMPLATE = '{{FORM1}} {COUNTRY_RELATION} ?{COUNTRY} .' \
                              '{{FORM2}} {COUNTRY_RELATION} ?{COUNTRY} .'
 LIST_FILTER_TEMPLATE = '?{CAPITAL} {COUNTRY_RELATION} ?{COUNTRY} .' \
-                       ' FILTER regex(str(?{CAPITAL}), "{{STR}}", "i") .'
+                       ' FILTER regex(str(?{CAPITAL}), "%s.*{{STR}}.*", "i") .' % EXAMPLE_PREFIX
 PRESIDENT_FILTER_TEMPLATE = '?{PRESIDENT} {PRESIDENT_RELATION} ?{COUNTRY} .' \
                             '?{PRESIDENT} {BORN_RELATION} {{COUNTRY}} .'
 
