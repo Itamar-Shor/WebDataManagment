@@ -62,7 +62,7 @@ class Ontology:
         info_box = doc.xpath("//table[contains(@class, 'infobox') or contains(@class, 'vcard')][1]")[0]
 
         # extract fields
-        capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a/@href")
+        capital_box = info_box.xpath(".//tr[./th[text() = 'Capital']]//a[not(../../sup)]/@href")
         if len(capital_box) > 0:
             capital = os.path.split(capital_box[0])[1]
             if 'De_jure' in capital and len(capital_box) > 1:

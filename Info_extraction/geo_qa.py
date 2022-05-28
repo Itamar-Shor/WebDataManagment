@@ -6,10 +6,6 @@ from test import test
 from urllib.parse import unquote
 
 
-#   TODO:
-#       12. check of os.path.sep is needed
-
-
 def main():
     if len(sys.argv) < 2:
         print("Error: expected 'create' or 'question' flags, but received none!")
