@@ -49,7 +49,6 @@ class Ontology:
     
     def extract_country_info(self, path):
         path = defs.WIKI_INIT + path
-        print(f'path {path}')
         r = requests.get(path)
         doc = lxml.html.fromstring(r.content)
         country_name = os.path.split(path)[1].replace(" ", "_")
@@ -106,7 +105,6 @@ class Ontology:
             # ignore Estimate
 
             if i < len(population_box) and '-' not in population_box[i]:
-                # print(f"i={i}, len={len(population_box)}, '{population_box[i]}', {len(population_box[i])}")
                 population = population_box[i].split()[0].strip().replace('.', ',')
 
         # dealing with case that the number is on the same row (Channel_Islands)

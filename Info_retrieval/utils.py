@@ -1,6 +1,8 @@
 from nltk.stem import PorterStemmer
 import json
 from nltk.tokenize import word_tokenize
+import numpy as np
+from numpy.linalg import norm
 
 
 class Tokenizer:
@@ -12,3 +14,7 @@ class Tokenizer:
     def tokenize_string(self, st):
         words = word_tokenize(st)
         return {self.stemmer.stem(word) for word in words if word not in self.stop_words}
+
+
+def cosine_similarity(v1, v2):
+    return np.dot(v1, v2) / (norm(v1)*norm(v2))
