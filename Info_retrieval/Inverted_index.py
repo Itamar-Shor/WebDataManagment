@@ -35,6 +35,9 @@ class InverseIndex:
                 data = f.read()
                 self.dictionary.update(self.tokenizer.tokenize_string(data))
 
+    def get_corpus_size(self):
+        return len(self.corpus)
+
     def get_df(self, word):
         return self.inverted_index[word]['df']
 

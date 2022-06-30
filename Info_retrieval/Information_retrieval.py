@@ -1,17 +1,16 @@
 import numpy as np
 
 import utils
-# from Inverted_index import InverseIndex
+from Inverted_index import InverseIndex
 from collections import OrderedDict
 
 
-# TODO: change D to real corpus length
 class InformationExtraction:
     def __init__(self):
         self.tokenizer = utils.Tokenizer()
         self.index = None
 
-    def get_ranking(self, query, ranking, index):
+    def get_ranking(self, query, ranking, index: InverseIndex):
         self.index = index
         q_key_words = self.tokenizer.tokenize_string(query)
         q_tf = dict()
@@ -33,7 +32,7 @@ class InformationExtraction:
         Y = dict()  # length(D)
         for word in query_key_words:
             K = query_key_words[word]  # tf(word,Q)
-            I = utils.calc_idf(df=self.index.get_df(word), D=10)
+            I = utils.calc_idf(df=self.index.get_df(word), D=self.index.get_corpus_size)
             W = K*I
             tf_list = self.index.get_tf_list(word)
             for doc, doc_tf in tf_list:
@@ -57,7 +56,7 @@ class InformationExtraction:
         for word in query_key_words:
             tf_list = self.index.get_tf_list(word)
             n = len(tf_list)
-            D = 100
+            D = self.index.get_corpus_size
             for doc, doc_tf in tf_list:
                 if doc not in R:
                     R[doc] = 0.0
