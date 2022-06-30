@@ -5,6 +5,7 @@ import utils
 from collections import OrderedDict
 
 
+# TODO: change D to real corpus length
 class InformationExtraction:
     def __init__(self):
         self.tokenizer = utils.Tokenizer()
@@ -12,31 +13,56 @@ class InformationExtraction:
 
     def get_ranking(self, query, ranking, index):
         self.index = index
-        # TODO: remove words that not in the dict
         q_key_words = self.tokenizer.tokenize_string(query)
+        q_tf = dict()
+        for word in q_key_words:
+            if word not in q_tf:
+                q_tf[word] = 0
+            q_tf[word] += 1
         if ranking == 'tfidf':
-            return self.rank_by_TF_IDF_score(q_key_words)
+            return self.rank_by_TF_IDF_score(q_tf)
         elif ranking == 'bm25':
-            return self.rank_by_BM25_score(q_key_words)
+            return self.rank_by_BM25_score(q_tf)
         else:
             print(f"Error: got unrecognized ranking '{ranking}'.")
             return None
 
     def rank_by_TF_IDF_score(self, query_key_words):
-        # weights = np.zeros((len(query_key_words), len(index.corpus)))
-        weights = [[self.index.TF[doc][word]*self.index.IDF[word] for doc in self.index.corpus] for word in self.index.dictionary]
-        d = [[weights[word][doc] for word in self.index.dictionary] for doc in self.index.corpus]
-        q = None
-        ranks = OrderedDict()
-        for i, doc in enumerate(self.index.dictionary):
-            ranks[doc] = utils.cosine_similarity(d[i], q)
+        R = dict()
+        L = 0  # length(Q)
+        Y = dict()  # length(D)
+        for word in query_key_words:
+            K = query_key_words[word]  # tf(word,Q)
+            I = utils.calc_idf(df=self.index.get_df(word), D=10)
+            W = K*I
+            tf_list = self.index.get_tf_list(word)
+            for doc, doc_tf in tf_list:
+                # doc was not previously retrieved
+                if doc not in R:
+                    R[doc] = 0.0
+                    Y[doc] = 0.0
 
-        return OrderedDict(sorted(ranks.items(), key=lambda t: t[1], reverse=True)).keys()
+                R[doc] += W*I*doc_tf
+                Y[doc] += (I*doc_tf)**2
+            L += (W**2)
 
-    def rank_by_BM25_score(self, query_key_words):
-        n = {q_word: 0 for q_word in query_key_words}  # number og docs containing q_word
-        N = len(self.index.corpus)
-        idf = {q: np.log(((N-n[q]+0.5)/(n[q]+0.5)) + 1) for q in query_key_words}
-        ranks = OrderedDict()
-        for i, doc in enumerate(self.index.dictionary):
-            ranks[doc] = np.sum([idf[q]*(()/()) for q in query_key_words])
+        L = np.sqrt(L)
+        for doc in R:
+            R[doc] = R[doc] / (L*Y[doc])
+
+        return [item for item in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+
+    def rank_by_BM25_score(self, query_key_words, k1, b):
+        R = dict()
+        for word in query_key_words:
+            tf_list = self.index.get_tf_list(word)
+            n = len(tf_list)
+            D = 100
+            for doc, doc_tf in tf_list:
+                if doc not in R:
+                    R[doc] = 0.0
+
+                idf = np.log(((D - n + 0.5) / (n + 0.5)) + 1)
+                R[doc] += idf*((doc_tf * (k1+1)) / (doc_tf + k1*(1-b+b*(0x0000000001))))
+
+        return [item for item in sorted(R.items(), key=lambda x: x[1], reverse=True)]
