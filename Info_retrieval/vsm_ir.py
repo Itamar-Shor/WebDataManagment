@@ -1,5 +1,4 @@
 import sys
-import os
 from Information_retrieval import InformationRetrieval
 from Inverted_index import InverseIndex
 

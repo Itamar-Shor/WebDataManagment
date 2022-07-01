@@ -15,6 +15,7 @@ class Tokenizer:
 
     def tokenize_string(self, st):
         words = word_tokenize(st)
+        # TODO: maybe ignore numbers
         return [self.stemmer.stem(word) for word in words if word not in self.stop_words]
 
 

@@ -1,8 +1,7 @@
 import numpy as np
 
 import utils
-from Inverted_index import InverseIndex
-from collections import OrderedDict
+import json
 
 
 class InformationRetrieval:
@@ -10,8 +9,9 @@ class InformationRetrieval:
         self.tokenizer = utils.Tokenizer()
         self.index = None
 
-    def get_ranking(self, query, ranking, index: InverseIndex):
-        self.index = index
+    def get_ranking(self, query, ranking, index_path):
+        with open(index_path, 'r') as fd:
+            self.index = json.load(fd)
         q_key_words = self.tokenizer.tokenize_string(query)
         q_tf = dict()
         for word in q_key_words:
@@ -21,7 +21,7 @@ class InformationRetrieval:
         if ranking == 'tfidf':
             return self.rank_by_TF_IDF_score(q_tf)
         elif ranking == 'bm25':
-            return self.rank_by_BM25_score(q_tf)
+            return self.rank_by_BM25_score(q_tf, k1=0.5, b=0.5)
         else:
             print(f"Error: got unrecognized ranking '{ranking}'.")
             return None
@@ -32,9 +32,9 @@ class InformationRetrieval:
         Y = dict()  # length(D)
         for word in query_key_words:
             K = query_key_words[word]  # tf(word,Q)
-            I = utils.calc_idf(df=self.index.get_df(word), D=self.index.get_corpus_size)
+            I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['corpus']))
             W = K*I
-            tf_list = self.index.get_tf_list(word)
+            tf_list = self.index[word]['tf_list']
             for doc, doc_tf in tf_list:
                 # doc was not previously retrieved
                 if doc not in R:
@@ -49,19 +49,22 @@ class InformationRetrieval:
         for doc in R:
             R[doc] = R[doc] / (L*Y[doc])
 
-        return [item for item in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+        return [self.index['corpus'][idx] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 
     def rank_by_BM25_score(self, query_key_words, k1, b):
         R = dict()
+        avgdl = np.average(self.index['doc_lens'])
         for word in query_key_words:
-            tf_list = self.index.get_tf_list(word)
+            tf_list = self.index[word]['tf_list']
             n = len(tf_list)
-            D = self.index.get_corpus_size
+            N = len(self.index['corpus'])
             for doc, doc_tf in tf_list:
                 if doc not in R:
                     R[doc] = 0.0
 
-                idf = np.log(((D - n + 0.5) / (n + 0.5)) + 1)
-                R[doc] += idf*((doc_tf * (k1+1)) / (doc_tf + k1*(1-b+b*(0x0000000001))))
+                D = self.index['doc_lens'][doc]
 
-        return [item for item in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+                idf = np.log(((N - n + 0.5) / (n + 0.5)) + 1)
+                R[doc] += idf*((doc_tf * (k1+1)) / (doc_tf + k1*(1-b+b*(D/avgdl))))
+
+        return [self.index['corpus'][idx] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
