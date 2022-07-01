@@ -5,7 +5,7 @@ from Inverted_index import InverseIndex
 from collections import OrderedDict
 
 
-class InformationExtraction:
+class InformationRetrieval:
     def __init__(self):
         self.tokenizer = utils.Tokenizer()
         self.index = None
