@@ -48,7 +48,7 @@ class InformationRetrieval:
         L = np.sqrt(L)
         for doc in R:
             R[doc] = R[doc] / (L*Y[doc])
-
+        # TODO: fix - idx = (key,val)
         return [self.index['corpus'][idx] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 
     def rank_by_BM25_score(self, query_key_words, k1, b):
