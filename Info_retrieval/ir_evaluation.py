@@ -25,9 +25,9 @@ def load_query_db(xml_path):
         query_db.append({'query': q_text, 'results': {}})
         q_results = query_item.xpath(".//Item")
         for q_res in q_results:
-            doc = q_res.xpath('./text()')[0]
+            doc = int(q_res.xpath('./text()')[0])
             score = q_res.xpath('./@score')[0]
-            query_db[-1]['results'][doc] = score
+            query_db[-1]['results'][doc] = sum([int(i) for i in score])
     return query_db
 
 
@@ -48,10 +48,10 @@ def calc_precision_recall(our_list, ideal_list):
 
 def calc_DCG(docs, n=10):
     docs_list = [item[1] for item in sorted(docs.items(), key=lambda x: x[1], reverse=True)]
-    dcg = int(docs_list[0])
+    dcg = docs_list[0]
     i = 1
     for doc_idx in range(i, min(n, len(docs_list))):
-        dcg += int(docs_list[doc_idx]) / (np.log2(i+1))
+        dcg += (docs_list[doc_idx] / (np.log2(i+1)))
     return dcg
 
 
@@ -63,9 +63,9 @@ def test(ranking, index_path, xml_path):
         precision, recall = calc_precision_recall(our_list, ideal_list)
         print(precision, recall)
         F = (2 * precision * recall) / (precision + recall)
-        dcg = calc_DCG(our_list)
-        idcg = calc_DCG(ideal_list)
-        ndcg = dcg / idcg
+        dcg = 0  # calc_DCG(our_list)
+        idcg = 0  # calc_DCG(ideal_list)
+        ndcg = 0  # dcg / idcg
         print(f"\nquery = {query['query']}\n\tprecision = {precision}\n\trecall = {recall}\n\tF = {F}\n\tNDCG = {ndcg}\n")
 
 

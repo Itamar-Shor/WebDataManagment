@@ -8,6 +8,7 @@ import nltk
 
 class Tokenizer:
     def __init__(self):
+        # TODO check this
         # nltk.download()
         self.stemmer = PorterStemmer()
         with open(r'stop_words_english.json', 'r', errors='ignore') as f:

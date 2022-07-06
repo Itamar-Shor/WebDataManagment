@@ -8,7 +8,6 @@ import math
 
 """
 inverted_index = {
-    corpus: [file_paths],
     doc_lens: [lens],
     word: {
         df: <val>,
@@ -31,12 +30,11 @@ class InverseIndex:
     def __init__(self, corpus_path):
         self.corpus = [os.path.join(corpus_path, file) for file in os.listdir(corpus_path)]
         self.dictionary = dict()
-        self.inverted_index = {'corpus': self.corpus}
+        self.inverted_index = dict()
         self.tokenizer = Tokenizer()
         self.IDFs = dict()
 
-    
-    
+
     def build_dictionary(self):
         """
         :param doc_path: path to a document to extract words from.
@@ -58,7 +56,7 @@ class InverseIndex:
         records = xml.xpath("//RECORD")
         
         for (idx, record) in enumerate(records):
-            record_num = record.xpath("./RECORDNUM/text()")[0]
+            record_num = int(record.xpath("./RECORDNUM/text()")[0])
             data[record_num] = []
             list_records.append(record_num)
             
@@ -71,7 +69,7 @@ class InverseIndex:
                 record_extract = extract[0]
                 data[list_records[idx]] = data[list_records[idx]]+ self.tokenizer.tokenize_string(record_extract)
             
-            abstract = record.xpath("./EXTRACT/text()")
+            abstract = record.xpath("./ABSTRACT/text()")
             if(len(abstract) > 0):
                 record_abstract = abstract[0]
                 data[list_records[idx]] = data[list_records[idx]]+ self.tokenizer.tokenize_string(record_abstract)
@@ -106,17 +104,15 @@ class InverseIndex:
         docs_len = dict()
         #print(" keys: ", self.inverted_index)
         for T in self.inverted_index.keys():
-            # print("T: ",T)
-            if T != 'corpus':
-                # print("dvir ",self.inverted_index[T]['tf_list'])
-                for doc, tf in self.inverted_index[T]['tf_list']:
-                    # print("(doc, tf): ",doc, tf)
-                    if doc not in docs_len:
-                        docs_len[doc] = 0.0
-                    I = self.IDFs[T]
-                    C = tf
-                    docs_len[doc] += (I * C) ** 2
-                    # print(doc)
+            # print("dvir ",self.inverted_index[T]['tf_list'])
+            for doc, tf in self.inverted_index[T]['tf_list']:
+                # print("(doc, tf): ",doc, tf)
+                if doc not in docs_len:
+                    docs_len[doc] = 0.0
+                I = self.IDFs[T]
+                C = tf
+                docs_len[doc] += (I * C) ** 2
+                # print(doc)
         
         for doc in self.dictionary.keys():
             docs_len[doc] = math.sqrt(docs_len[doc])

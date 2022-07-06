@@ -21,6 +21,7 @@ class InformationRetrieval:
         if ranking == 'tfidf':
             return self.rank_by_TF_IDF_score(q_tf)
         elif ranking == 'bm25':
+            # TODO: set k1 and b
             return self.rank_by_BM25_score(q_tf, k1=0.5, b=0.5)
         else:
             print(f"Error: got unrecognized ranking '{ranking}'.")
@@ -32,7 +33,7 @@ class InformationRetrieval:
         Y = dict()  # length(D)
         for word in query_key_words:
             K = query_key_words[word]  # tf(word,Q)
-            I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['corpus']))
+            I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['doc_lens']))
             W = K*I
             tf_list = self.index[word]['tf_list']
             for doc, doc_tf in tf_list:
@@ -49,7 +50,7 @@ class InformationRetrieval:
         for doc in R:
             R[doc] = R[doc] / (L*Y[doc])
         # TODO: fix - idx = (key,val)
-        return [self.index['corpus'][idx] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+        return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 
     def rank_by_BM25_score(self, query_key_words, k1, b):
         R = dict()
@@ -57,7 +58,7 @@ class InformationRetrieval:
         for word in query_key_words:
             tf_list = self.index[word]['tf_list']
             n = len(tf_list)
-            N = len(self.index['corpus'])
+            N = len(self.index['doc_lens'])
             for doc, doc_tf in tf_list:
                 if doc not in R:
                     R[doc] = 0.0
@@ -67,4 +68,4 @@ class InformationRetrieval:
                 idf = np.log(((N - n + 0.5) / (n + 0.5)) + 1)
                 R[doc] += idf*((doc_tf * (k1+1)) / (doc_tf + k1*(1-b+b*(D/avgdl))))
 
-        return [self.index['corpus'][idx] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+        return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
