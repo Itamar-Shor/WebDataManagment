@@ -82,9 +82,11 @@ class InverseIndex:
         count = dict()
 
         for doc in self.dictionary.keys():
+            
             hashmap_vec = self.build_hash_map_vector(doc)
             #print("doc, hashmap_vec ",doc, hashmap_vec)
             for key in hashmap_vec.keys():
+                if("patients" in key): print(key)
                 if key not in self.inverted_index:
                     self.inverted_index[key] = {'df': 0, 'tf_list': []}
                 self.inverted_index[key]['df'] += 1
@@ -126,8 +128,13 @@ class InverseIndex:
     def build_hash_map_vector(self, doc):
         hashmap_vec = dict()  # { word: occ , ...}
         words = self.dictionary[doc]
+        max = 1
         for word in set(words):
+            count = countOf(words, word)
+            if(count > max): max = count
             hashmap_vec[word] = countOf(words, word)
+            
+        hashmap_vec = {word:hashmap_vec[word]/max for word in hashmap_vec}
         return hashmap_vec
 
 

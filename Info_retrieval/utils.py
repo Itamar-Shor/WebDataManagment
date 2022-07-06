@@ -4,6 +4,7 @@ from nltk.tokenize import word_tokenize
 import numpy as np
 from numpy.linalg import norm
 import nltk
+import re
 
 
 class Tokenizer:
@@ -15,9 +16,11 @@ class Tokenizer:
             self.stop_words = json.load(f)
 
     def tokenize_string(self, st):
+        st = re.sub(r"[^a-zA-Z0-9]", " ", st)
         words = word_tokenize(st)
+        
         # TODO: maybe ignore numbers
-        return [self.stemmer.stem(word) for word in words if word not in self.stop_words]
+        return [self.stemmer.stem(word) for word in words if word.lower() not in self.stop_words and len(word) > 1]
 
 
 def calc_idf(df, D):

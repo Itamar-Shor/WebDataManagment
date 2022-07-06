@@ -13,6 +13,7 @@ class InformationRetrieval:
         with open(index_path, 'r') as fd:
             self.index = json.load(fd)
         q_key_words = self.tokenizer.tokenize_string(query)
+        print(q_key_words)
         q_tf = dict()
         for word in q_key_words:
             if word not in q_tf:
@@ -33,7 +34,10 @@ class InformationRetrieval:
         Y = dict()  # length(D)
         for word in query_key_words:
             K = query_key_words[word]  # tf(word,Q)
-            I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['doc_lens']))
+            if(word in self.index):
+                I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['doc_lens']))
+            else:
+                continue
             W = K*I
             tf_list = self.index[word]['tf_list']
             for doc, doc_tf in tf_list:
@@ -54,7 +58,7 @@ class InformationRetrieval:
 
     def rank_by_BM25_score(self, query_key_words, k1, b):
         R = dict()
-        avgdl = np.average(self.index['doc_lens'])
+        avgdl = np.average(list(self.index['doc_lens'].values()))
         for word in query_key_words:
             tf_list = self.index[word]['tf_list']
             n = len(tf_list)

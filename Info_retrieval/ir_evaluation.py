@@ -33,7 +33,7 @@ def load_query_db(xml_path):
 
 def get_our_ret_list(ranking, index_path, question):
     retriever = InformationRetrieval()
-    return retriever.get_ranking(question, ranking, index_path)
+    return retriever.get_ranking(question, ranking, index_path)[:100]
 
 
 def calc_precision_recall(our_list, ideal_list):
@@ -62,7 +62,9 @@ def test(ranking, index_path, xml_path):
         ideal_list = query['results']
         precision, recall = calc_precision_recall(our_list, ideal_list)
         print(precision, recall)
-        F = (2 * precision * recall) / (precision + recall)
+        if(precision + recall != 0):
+            F = (2 * precision * recall) / (precision + recall)
+        else: F=0
         dcg = 0  # calc_DCG(our_list)
         idcg = 0  # calc_DCG(ideal_list)
         ndcg = 0  # dcg / idcg
@@ -71,4 +73,4 @@ def test(ranking, index_path, xml_path):
 
 if __name__ == '__main__':
     path = r'cfquery.xml'
-    test(ranking='tf-idf', index_path='', xml_path=path)
+    test(ranking='tfidf', index_path='vsm_inverted_index.json', xml_path=path)
