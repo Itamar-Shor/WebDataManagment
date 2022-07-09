@@ -19,6 +19,8 @@ class InformationRetrieval:
             if word not in q_tf:
                 q_tf[word] = 0
             q_tf[word] += 1
+        max_freq = np.max(q_tf.values())
+        q_tf = [f / max_freq for f in q_tf]
         if ranking == 'tfidf':
             return self.rank_by_TF_IDF_score(q_tf)
         elif ranking == 'bm25':
@@ -52,8 +54,8 @@ class InformationRetrieval:
 
         L = np.sqrt(L)
         for doc in R:
-            R[doc] = R[doc] / (L*Y[doc])
-        # TODO: fix - idx = (key,val)
+            R[doc] = R[doc] / (L * np.sqrt(Y[doc]))
+
         return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 
     def rank_by_BM25_score(self, query_key_words, k1, b):
