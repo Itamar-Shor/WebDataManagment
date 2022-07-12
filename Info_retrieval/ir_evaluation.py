@@ -73,4 +73,4 @@ def test(ranking, index_path, xml_path):
 
 if __name__ == '__main__':
     path = r'cfquery.xml'
-    test(ranking='tfidf', index_path='vsm_inverted_index.json', xml_path=path)
+    test(ranking='bm25', index_path='vsm_inverted_index.json', xml_path=path)

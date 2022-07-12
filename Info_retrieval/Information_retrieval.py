@@ -37,10 +37,9 @@ class InformationRetrieval:
         print(query_key_words)
         for word in query_key_words:
             K = query_key_words[word]  # tf(word,Q)
-            if(word in self.index):
-                I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['doc_lens']))
-            else:
+            if word not in self.index:
                 continue
+            I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['doc_lens']))
             W = K*I
             tf_list = self.index[word]['tf_list']
             for doc, doc_tf in tf_list:
@@ -63,6 +62,8 @@ class InformationRetrieval:
         R = dict()
         avgdl = np.average(list(self.index['doc_lens'].values()))
         for word in query_key_words:
+            if word not in self.index:
+                continue
             tf_list = self.index[word]['tf_list']
             n = len(tf_list)
             N = len(self.index['doc_lens'])
