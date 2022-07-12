@@ -13,19 +13,19 @@ class InformationRetrieval:
         with open(index_path, 'r') as fd:
             self.index = json.load(fd)
         q_key_words = self.tokenizer.tokenize_string(query)
-        print(q_key_words)
+        print(f"query_key_words = {q_key_words}")
         q_tf = dict()
         for word in q_key_words:
             if word not in q_tf:
                 q_tf[word] = 0
             q_tf[word] += 1
-        max_freq = np.max(q_tf.values())
-        q_tf = [f / max_freq for f in q_tf]
+        max_freq = q_tf[max(q_tf, key=q_tf.get)]
+        q_tf = {term: (q_tf[term] / max_freq) for term in q_tf}
         if ranking == 'tfidf':
             return self.rank_by_TF_IDF_score(q_tf)
         elif ranking == 'bm25':
             # TODO: set k1 and b
-            return self.rank_by_BM25_score(q_tf, k1=0.5, b=0.5)
+            return self.rank_by_BM25_score(q_tf, k1=0.3, b=0.1)
         else:
             print(f"Error: got unrecognized ranking '{ranking}'.")
             return None
@@ -34,6 +34,7 @@ class InformationRetrieval:
         R = dict()
         L = 0  # length(Q)
         Y = dict()  # length(D)
+        print(query_key_words)
         for word in query_key_words:
             K = query_key_words[word]  # tf(word,Q)
             if(word in self.index):
@@ -69,7 +70,7 @@ class InformationRetrieval:
                 if doc not in R:
                     R[doc] = 0.0
 
-                D = self.index['doc_lens'][doc]
+                D = self.index['doc_lens'][f"{doc}"]
 
                 idf = np.log(((N - n + 0.5) / (n + 0.5)) + 1)
                 R[doc] += idf*((doc_tf * (k1+1)) / (doc_tf + k1*(1-b+b*(D/avgdl))))

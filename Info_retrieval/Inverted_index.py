@@ -34,68 +34,66 @@ class InverseIndex:
         self.tokenizer = Tokenizer()
         self.IDFs = dict()
 
-
     def build_dictionary(self):
         """
         :param doc_path: path to a document to extract words from.
         :return: all the relevant words - after tokenization, removing stopwords and stemming.
         """
-        c= 0 
+        c = 0
         for xml_doc in self.corpus:
             data = self.load_xml(xml_doc)
             self.dictionary.update(data)
-        
-        #print(self.dictionary)
+
+        # print(self.dictionary)
 
     def load_xml(self, xml_path) -> dict:
         with open(xml_path, 'r') as fd:
             xml = etree.fromstring(fd.read())
-        
+
         data = dict()
         list_records = []
         records = xml.xpath("//RECORD")
-        
+
         for (idx, record) in enumerate(records):
             record_num = int(record.xpath("./RECORDNUM/text()")[0])
             data[record_num] = []
             list_records.append(record_num)
-            
+
             record_title = record.xpath("./TITLE/text()")[0]
-            
-            data[list_records[idx]] = data[list_records[idx]]+ self.tokenizer.tokenize_string(record_title)
-            
+
+            data[list_records[idx]] = data[list_records[idx]] + self.tokenizer.tokenize_string(record_title)
+
             extract = record.xpath("./EXTRACT/text()")
-            if(len(extract) > 0):
+            if (len(extract) > 0):
                 record_extract = extract[0]
-                data[list_records[idx]] = data[list_records[idx]]+ self.tokenizer.tokenize_string(record_extract)
-            
+                data[list_records[idx]] = data[list_records[idx]] + self.tokenizer.tokenize_string(record_extract)
+
             abstract = record.xpath("./ABSTRACT/text()")
-            if(len(abstract) > 0):
+            if (len(abstract) > 0):
                 record_abstract = abstract[0]
-                data[list_records[idx]] = data[list_records[idx]]+ self.tokenizer.tokenize_string(record_abstract)
-        
-        
+                data[list_records[idx]] = data[list_records[idx]] + self.tokenizer.tokenize_string(record_abstract)
+
         return data
-    
+
     def build_inverted_index(self, index_path):
         self.build_dictionary()
         count = dict()
 
         for doc in self.dictionary.keys():
-            
+
             hashmap_vec = self.build_hash_map_vector(doc)
-            #print("doc, hashmap_vec ",doc, hashmap_vec)
+            # print("doc, hashmap_vec ",doc, hashmap_vec)
             for key in hashmap_vec.keys():
-                if("patients" in key): print(key)
+                if ("patients" in key): print(key)
                 if key not in self.inverted_index:
                     self.inverted_index[key] = {'df': 0, 'tf_list': []}
                 self.inverted_index[key]['df'] += 1
                 self.inverted_index[key]['tf_list'].append((doc, hashmap_vec[key]))
-                #print("dvir ",self.inverted_index[key]['tf_list'])
+                # print("dvir ",self.inverted_index[key]['tf_list'])
                 if key not in count:
                     count[key] = 0
                 count[key] += 1
-        
+
         # Compute IDF for all tokens in H;
         for T in self.inverted_index.keys():
             if T in count:
@@ -104,7 +102,7 @@ class InverseIndex:
 
         # Compute vector lengths for all documents in H;
         docs_len = dict()
-        #print(" keys: ", self.inverted_index)
+        # print(" keys: ", self.inverted_index)
         for T in self.inverted_index.keys():
             # print("dvir ",self.inverted_index[T]['tf_list'])
             for doc, tf in self.inverted_index[T]['tf_list']:
@@ -115,13 +113,12 @@ class InverseIndex:
                 C = tf
                 docs_len[doc] += (I * C) ** 2
                 # print(doc)
-        
+
         for doc in self.dictionary.keys():
             docs_len[doc] = math.sqrt(docs_len[doc])
-        
 
         self.inverted_index['doc_lens'] = docs_len
-        
+
         with open(index_path, "w") as outfile:
             json.dump(self.inverted_index, outfile, indent=4)
 
@@ -131,12 +128,11 @@ class InverseIndex:
         max = 1
         for word in set(words):
             count = countOf(words, word)
-            if(count > max): max = count
+            if (count > max): max = count
             hashmap_vec[word] = countOf(words, word)
-            
-        hashmap_vec = {word:hashmap_vec[word]/max for word in hashmap_vec}
-        return hashmap_vec
 
+        hashmap_vec = {word: hashmap_vec[word] / max for word in hashmap_vec}
+        return hashmap_vec
 
 # if __name__ == "__main__":
 #     path = os.path.join(os.path.dirname(__file__), 'cfc-xml_corrected')
