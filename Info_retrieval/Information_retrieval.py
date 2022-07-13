@@ -19,9 +19,10 @@ class InformationRetrieval:
             if word not in q_tf:
                 q_tf[word] = 0
             q_tf[word] += 1
-        max_freq = q_tf[max(q_tf, key=q_tf.get)]
-        q_tf = {term: (q_tf[term] / max_freq) for term in q_tf}
+
         if ranking == 'tfidf':
+            max_freq = q_tf[max(q_tf, key=q_tf.get)]
+            q_tf = {term: (q_tf[term] / max_freq) for term in q_tf}
             return self.rank_by_TF_IDF_score(q_tf)
         elif ranking == 'bm25':
             # TODO: set k1 and b
@@ -33,12 +34,12 @@ class InformationRetrieval:
     def rank_by_TF_IDF_score(self, query_key_words):
         R = dict()
         L = 0  # length(Q)
-        Y = dict()  # length(D)
         print(query_key_words)
         for word in query_key_words:
             K = query_key_words[word]  # tf(word,Q)
             if word not in self.index:
                 continue
+            # TODO: take from inverted index???
             I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['doc_lens']))
             W = K*I
             tf_list = self.index[word]['tf_list']
@@ -46,15 +47,14 @@ class InformationRetrieval:
                 # doc was not previously retrieved
                 if doc not in R:
                     R[doc] = 0.0
-                    Y[doc] = 0.0
-
                 R[doc] += W*I*doc_tf
-                Y[doc] += (I*doc_tf)**2
+            # TODO: check this
             L += (W**2)
 
         L = np.sqrt(L)
         for doc in R:
-            R[doc] = R[doc] / (L * np.sqrt(Y[doc]))
+            Y = self.index['doc_lens'][f"{doc}"]
+            R[doc] = R[doc] / (L * Y)
 
         return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 

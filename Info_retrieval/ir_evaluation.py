@@ -2,6 +2,7 @@ import os
 from lxml import etree
 from Information_retrieval import InformationRetrieval
 import numpy as np
+import sys
 
 """
 query_db = {
@@ -73,4 +74,5 @@ def test(ranking, index_path, xml_path):
 
 if __name__ == '__main__':
     path = r'cfquery.xml'
-    test(ranking='bm25', index_path='vsm_inverted_index.json', xml_path=path)
+    sys.argv
+    test(ranking=sys.argv[1], index_path='vsm_inverted_index.json', xml_path=path)
