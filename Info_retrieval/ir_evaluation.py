@@ -28,13 +28,14 @@ def load_query_db(xml_path):
         for q_res in q_results:
             doc = int(q_res.xpath('./text()')[0])
             score = q_res.xpath('./@score')[0]
-            query_db[-1]['results'][doc] = sum([int(i) for i in score])
+            query_db[-1]['results'][doc] = sum([int(i) for i in score]) / 4
     return query_db
 
 
 def get_our_ret_list(ranking, index_path, question):
     retriever = InformationRetrieval()
-    return retriever.get_ranking(question, ranking, index_path)[:100]
+    our_l = retriever.get_ranking(question, ranking, index_path, include_scores=True)[:10]
+    return {item[0]: item[1] for item in our_l}
 
 
 def calc_precision_recall(our_list, ideal_list):
@@ -66,13 +67,12 @@ def test(ranking, index_path, xml_path):
         if(precision + recall != 0):
             F = (2 * precision * recall) / (precision + recall)
         else: F=0
-        dcg = 0  # calc_DCG(our_list)
-        idcg = 0  # calc_DCG(ideal_list)
-        ndcg = 0  # dcg / idcg
+        dcg = calc_DCG(our_list)
+        idcg = calc_DCG(ideal_list)
+        ndcg = dcg / idcg
         print(f"\nquery = {query['query']}\n\tprecision = {precision}\n\trecall = {recall}\n\tF = {F}\n\tNDCG = {ndcg}\n")
 
 
 if __name__ == '__main__':
     path = r'cfquery.xml'
-    sys.argv
     test(ranking=sys.argv[1], index_path='vsm_inverted_index.json', xml_path=path)

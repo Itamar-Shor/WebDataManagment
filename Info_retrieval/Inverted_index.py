@@ -97,7 +97,7 @@ class InverseIndex:
         # Compute IDF for all tokens in H;
         for T in self.inverted_index.keys():
             if T in count:
-                self.IDFs[T] = calc_idf(count[T], len(self.inverted_index.keys()))
+                self.IDFs[T] = calc_idf(df=count[T], D=len(self.dictionary))
         # print("IDFs: ", self.IDFs)
 
         # Compute vector lengths for all documents in H;
