@@ -8,6 +8,7 @@ import math
 
 """
 inverted_index = {
+    vector_lens: [lens],
     doc_lens: [lens],
     word: {
         df: <val>,
@@ -101,23 +102,24 @@ class InverseIndex:
         # print("IDFs: ", self.IDFs)
 
         # Compute vector lengths for all documents in H;
-        docs_len = dict()
+        vectors_len = dict()
         # print(" keys: ", self.inverted_index)
         for T in self.inverted_index.keys():
             # print("dvir ",self.inverted_index[T]['tf_list'])
             for doc, tf in self.inverted_index[T]['tf_list']:
                 # print("(doc, tf): ",doc, tf)
-                if doc not in docs_len:
-                    docs_len[doc] = 0.0
+                if doc not in vectors_len:
+                    vectors_len[doc] = 0.0
                 I = self.IDFs[T]
                 C = tf
-                docs_len[doc] += (I * C) ** 2
+                vectors_len[doc] += (I * C) ** 2
                 # print(doc)
 
         for doc in self.dictionary.keys():
-            docs_len[doc] = math.sqrt(docs_len[doc])
+            vectors_len[doc] = math.sqrt(vectors_len[doc])
 
-        self.inverted_index['doc_lens'] = docs_len
+        self.inverted_index['vector_lens'] = vectors_len
+        self.inverted_index['doc_lens'] = {doc: len(self.dictionary[doc]) for doc in self.dictionary}
 
         with open(index_path, "w") as outfile:
             json.dump(self.inverted_index, outfile, indent=4)

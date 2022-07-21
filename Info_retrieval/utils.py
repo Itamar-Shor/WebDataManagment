@@ -1,26 +1,28 @@
 from nltk.stem import PorterStemmer
-import json
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
 import numpy as np
 from numpy.linalg import norm
 import nltk
-import re
 
 
 class Tokenizer:
     def __init__(self):
         # TODO check this
-        # nltk.download()
+        # nltk.download('stop_words')
+        self.tokenizer = RegexpTokenizer(r'\w+')
         self.stemmer = PorterStemmer()
-        with open(r'stop_words_english.json', 'r', errors='ignore') as f:
-            self.stop_words = json.load(f)
+        try:
+            self.stop_words = set(stopwords.words("english"))
+        except:
+            nltk.download('stopwords')
+            self.stop_words = set(stopwords.words("english"))
 
     def tokenize_string(self, st):
-        st = re.sub(r"[^a-zA-Z0-9]", " ", st)
-        words = word_tokenize(st)
+        words = self.tokenizer.tokenize(st)
         
         # TODO: maybe ignore numbers
-        return [self.stemmer.stem(word) for word in words if word.lower() not in self.stop_words and len(word) > 1]
+        return [self.stemmer.stem(word) for word in words if word.lower() not in self.stop_words]
 
 
 def calc_idf(df, D):

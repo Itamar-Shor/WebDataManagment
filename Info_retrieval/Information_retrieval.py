@@ -4,39 +4,41 @@ import utils
 import json
 
 
+def calc_tf_for_query(q_tokens):
+    q_tf = dict()
+    for word in q_tokens:
+        if word not in q_tf:
+            q_tf[word] = 0
+        q_tf[word] += 1
+    max_freq = q_tf[max(q_tf, key=q_tf.get)]
+    return {term: (q_tf[term] / max_freq) for term in q_tf}
+
+
 class InformationRetrieval:
     def __init__(self):
         self.tokenizer = utils.Tokenizer()
         self.index = None
 
-    def get_ranking(self, query, ranking, index_path, include_scores=False):
+    def get_ranking(self, query, ranking, index_path, k1=1.2, b=0.9):
         with open(index_path, 'r') as fd:
             self.index = json.load(fd)
         q_key_words = self.tokenizer.tokenize_string(query)
-        print(f"query_key_words = {q_key_words}")
-        q_tf = dict()
-        for word in q_key_words:
-            if word not in q_tf:
-                q_tf[word] = 0
-            q_tf[word] += 1
 
         if ranking == 'tfidf':
-            max_freq = q_tf[max(q_tf, key=q_tf.get)]
-            q_tf = {term: (q_tf[term] / max_freq) for term in q_tf}
-            return self.rank_by_TF_IDF_score(q_tf, include_scores=include_scores)
+            return self.rank_by_TF_IDF_score(q_key_words)
         elif ranking == 'bm25':
             # TODO: set k1 and b
-            return self.rank_by_BM25_score(q_tf, k1=1.5, b=0.6, include_scores=include_scores)
+            return self.rank_by_BM25_score(q_key_words, k1=k1, b=b)
         else:
             print(f"Error: got unrecognized ranking '{ranking}'.")
             return None
 
-    def rank_by_TF_IDF_score(self, query_key_words, include_scores):
+    def rank_by_TF_IDF_score(self, query_key_words):
         R = dict()
         L = 0  # length(Q)
-        print(query_key_words)
-        for word in query_key_words:
-            K = query_key_words[word]  # tf(word,Q)
+        q_tf = calc_tf_for_query(query_key_words)
+        for word in q_tf:
+            K = q_tf[word]  # tf(word,Q)
             if word not in self.index:
                 continue
             # TODO: take from inverted index???
@@ -53,15 +55,12 @@ class InformationRetrieval:
 
         L = np.sqrt(L)
         for doc in R:
-            Y = self.index['doc_lens'][f"{doc}"]
+            Y = self.index['vector_lens'][f"{doc}"]
             R[doc] = R[doc] / (L * Y)
 
-        if include_scores:
-            return [idx for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
-        else:
-            return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+        return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 
-    def rank_by_BM25_score(self, query_key_words, k1, b, include_scores):
+    def rank_by_BM25_score(self, query_key_words, k1, b):
         R = dict()
         avgdl = np.average(list(self.index['doc_lens'].values()))
         for word in query_key_words:
@@ -79,7 +78,4 @@ class InformationRetrieval:
                 idf = np.log(((N - n + 0.5) / (n + 0.5)) + 1)
                 R[doc] += idf*((doc_tf * (k1+1)) / (doc_tf + k1*(1-b+b*(D/avgdl))))
 
-        if include_scores:
-            return [idx for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
-        else:
-            return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+        return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
