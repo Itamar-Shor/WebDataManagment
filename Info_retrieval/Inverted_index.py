@@ -1,7 +1,7 @@
 from operator import countOf
 import os
 from utils import Tokenizer
-from utils import calc_idf, calc_cosine_similarity
+from utils import calc_idf
 import json
 from lxml import etree
 import math
@@ -36,16 +36,9 @@ class InverseIndex:
         self.IDFs = dict()
 
     def build_dictionary(self):
-        """
-        :param doc_path: path to a document to extract words from.
-        :return: all the relevant words - after tokenization, removing stopwords and stemming.
-        """
-        c = 0
         for xml_doc in self.corpus:
             data = self.load_xml(xml_doc)
             self.dictionary.update(data)
-
-        # print(self.dictionary)
 
     def load_xml(self, xml_path) -> dict:
         with open(xml_path, 'r') as fd:
@@ -65,12 +58,12 @@ class InverseIndex:
             data[list_records[idx]] = data[list_records[idx]] + self.tokenizer.tokenize_string(record_title)
 
             extract = record.xpath("./EXTRACT/text()")
-            if (len(extract) > 0):
+            if len(extract) > 0:
                 record_extract = extract[0]
                 data[list_records[idx]] = data[list_records[idx]] + self.tokenizer.tokenize_string(record_extract)
 
             abstract = record.xpath("./ABSTRACT/text()")
-            if (len(abstract) > 0):
+            if len(abstract) > 0:
                 record_abstract = abstract[0]
                 data[list_records[idx]] = data[list_records[idx]] + self.tokenizer.tokenize_string(record_abstract)
 
@@ -85,12 +78,10 @@ class InverseIndex:
             hashmap_vec = self.build_hash_map_vector(doc)
             # print("doc, hashmap_vec ",doc, hashmap_vec)
             for key in hashmap_vec.keys():
-                if ("patients" in key): print(key)
                 if key not in self.inverted_index:
                     self.inverted_index[key] = {'df': 0, 'tf_list': []}
                 self.inverted_index[key]['df'] += 1
                 self.inverted_index[key]['tf_list'].append((doc, hashmap_vec[key]))
-                # print("dvir ",self.inverted_index[key]['tf_list'])
                 if key not in count:
                     count[key] = 0
                 count[key] += 1
@@ -127,17 +118,12 @@ class InverseIndex:
     def build_hash_map_vector(self, doc):
         hashmap_vec = dict()  # { word: occ , ...}
         words = self.dictionary[doc]
-        max = 1
+        max_c = 1
         for word in set(words):
             count = countOf(words, word)
-            if (count > max): max = count
+            if count > max_c:
+                max_c = count
             hashmap_vec[word] = countOf(words, word)
 
-        hashmap_vec = {word: hashmap_vec[word] / max for word in hashmap_vec}
+        hashmap_vec = {word: hashmap_vec[word] / max_c for word in hashmap_vec}
         return hashmap_vec
-
-# if __name__ == "__main__":
-#     path = os.path.join(os.path.dirname(__file__), 'cfc-xml_corrected')
-
-#     inv = InverseIndex(path)
-#     inv.build_inverted_index(path)

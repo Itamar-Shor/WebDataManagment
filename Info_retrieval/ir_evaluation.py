@@ -32,7 +32,7 @@ def load_query_db(xml_path):
     return query_db
 
 
-def get_our_ret_list(ranking, index_path, question, k1=1.2, b=0.9):
+def get_our_ret_list(ranking, index_path, question, k1=1.2, b=0.15):
     retriever = InformationRetrieval()
     our_l = retriever.get_ranking(question, ranking, index_path, k1=k1, b=b)[:10]
     return our_l
@@ -82,9 +82,8 @@ def test(ranking, index_path, xml_path):
         precision, recall, F, ndcg = evaluate_results(our_list, ideal_list)
         print(f"\n[{idx}]: query = {query['query']}\n\tprecision = {precision}\n\trecall = {recall}\n\tF = {F}\n\tNDCG = {ndcg}\n")
         print(our_list)
-        print(ideal_list)
 
-# 1.2 0.9 for average and for sum!
+
 def find_optimal_params_for_bm25(index_path, xml_path):
     k1_vals = [1.2, 1.35, 1.5, 1.65, 1.8, 1.95, 2.1, 2.2]  # between 1.2 and 2.2
     b_vals = [0.15, 0.3, 0.45, 0.6, 0.75, 0.9]  # between 0 and 1 (usually 0.75)

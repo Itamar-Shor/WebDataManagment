@@ -8,8 +8,6 @@ import nltk
 
 class Tokenizer:
     def __init__(self):
-        # TODO check this
-        # nltk.download('stop_words')
         self.tokenizer = RegexpTokenizer(r'\w+')
         self.stemmer = PorterStemmer()
         try:
@@ -20,8 +18,6 @@ class Tokenizer:
 
     def tokenize_string(self, st):
         words = self.tokenizer.tokenize(st)
-        
-        # TODO: maybe ignore numbers
         return [self.stemmer.stem(word) for word in words if word.lower() not in self.stop_words]
 
 

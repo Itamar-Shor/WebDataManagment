@@ -1,7 +1,6 @@
 import sys
 from Information_retrieval import InformationRetrieval
 from Inverted_index import InverseIndex
-import nltk
 
 
 CREATE_IDX = 'create_index'
@@ -40,5 +39,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # nltk.data.path.append(os.path.realpath(r"nltk_data"))
     main()
