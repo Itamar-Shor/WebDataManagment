@@ -17,20 +17,25 @@ class InformationRetrieval:
     def __init__(self):
         self.tokenizer = utils.Tokenizer()
         self.index = None
+        self.N = 15
+        self.result_path = 'ranked_query_docs.txt'
 
-    def get_ranking(self, query, ranking, index_path, k1=1.2, b=0.9):
+    def get_ranking(self, query, ranking, index_path, k1=1.2, b=0.15):
         with open(index_path, 'r') as fd:
             self.index = json.load(fd)
         q_key_words = self.tokenizer.tokenize_string(query)
 
         if ranking == 'tfidf':
-            return self.rank_by_TF_IDF_score(q_key_words)
+            ranked_docs = self.rank_by_TF_IDF_score(q_key_words)[:self.N]
         elif ranking == 'bm25':
             # TODO: set k1 and b
-            return self.rank_by_BM25_score(q_key_words, k1=k1, b=b)
+            ranked_docs = self.rank_by_BM25_score(q_key_words, k1=k1, b=b)[:self.N]
         else:
             print(f"Error: got unrecognized ranking '{ranking}'.")
-            return None
+            return
+
+        with open(self.result_path, 'w') as fd:
+            fd.write('\n'.join(ranked_docs))
 
     def rank_by_TF_IDF_score(self, query_key_words):
         R = dict()
@@ -40,7 +45,7 @@ class InformationRetrieval:
             K = q_tf[word]  # tf(word,Q)
             if word not in self.index:
                 continue
-            # TODO: take from inverted index???
+
             I = utils.calc_idf(df=self.index[word]['df'], D=len(self.index['doc_lens']))
             W = K*I  # query weight
             tf_list = self.index[word]['tf_list']
@@ -49,7 +54,7 @@ class InformationRetrieval:
                 if doc not in R:
                     R[doc] = 0.0
                 R[doc] += W*I*doc_tf
-            # TODO: check this
+
             L += (W**2)
 
         L = np.sqrt(L)
@@ -57,7 +62,7 @@ class InformationRetrieval:
             Y = self.index['vector_lens'][f"{doc}"]
             R[doc] = R[doc] / (L * Y)
 
-        return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+        return [str(idx[0]) for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 
     def rank_by_BM25_score(self, query_key_words, k1, b):
         R = dict()
@@ -77,4 +82,10 @@ class InformationRetrieval:
                 idf = np.log(((N - n + 0.5) / (n + 0.5)) + 1)
                 R[doc] += idf*((doc_tf * (k1+1)) / (doc_tf + k1*(1-b+b*(D/avgdl))))
 
-        return [idx[0] for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+        return [str(idx[0]) for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
+
+    def parse_ranked_list_from_file(self):
+        with open(self.result_path, 'r') as fd:
+            lines = fd.read().splitlines()
+            retrieved_documents = [int(line.rstrip()) for line in lines]
+        return retrieved_documents

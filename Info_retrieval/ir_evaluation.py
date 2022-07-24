@@ -34,8 +34,8 @@ def load_query_db(xml_path):
 
 def get_our_ret_list(ranking, index_path, question, k1=1.2, b=0.15):
     retriever = InformationRetrieval()
-    our_l = retriever.get_ranking(question, ranking, index_path, k1=k1, b=b)[:10]
-    return our_l
+    retriever.get_ranking(question, ranking, index_path, k1=k1, b=b)
+    return retriever.parse_ranked_list_from_file()
 
 
 def calc_precision_recall(our_list, ideal_list):
@@ -51,8 +51,8 @@ def calc_precision_recall(our_list, ideal_list):
 def calc_DCG(docs, n=10):
     docs_list = [item[1] for item in sorted(docs.items(), key=lambda x: x[1], reverse=True)]
     dcg = docs_list[0]
-    i = 1
-    for doc_idx in range(i, min(n, len(docs_list))):
+
+    for doc_idx in range(1, min(n, len(docs_list))):
         dcg += (docs_list[doc_idx] / (np.log2(doc_idx+1)))
     return dcg
 
@@ -80,7 +80,7 @@ def test(ranking, index_path, xml_path):
         our_list = get_our_ret_list(ranking, index_path, query['query'])
         ideal_list = query['results']
         precision, recall, F, ndcg = evaluate_results(our_list, ideal_list)
-        print(f"\n[{idx}]: query = {query['query']}\n\tprecision = {precision}\n\trecall = {recall}\n\tF = {F}\n\tNDCG = {ndcg}\n")
+        print(f"\n[{idx+1}]: query = {query['query']}\n\tprecision = {precision}\n\trecall = {recall}\n\tF = {F}\n\tNDCG = {ndcg}\n")
         print(our_list)
 
 

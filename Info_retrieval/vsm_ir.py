@@ -15,7 +15,7 @@ def build_index(corpus_dir, index_path='vsm_inverted_index.json'):
 
 def retrieve(ranking, index_path, question):
     retriever = InformationRetrieval()
-    return retriever.get_ranking(question, ranking, index_path)[:10]
+    retriever.get_ranking(question, ranking, index_path)
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
         if nof_args < 5:
             print("Error: missing arguments: [ranking] [index_path] '<question>'")
             exit(-1)
-        print(retrieve(ranking=sys.argv[2], index_path=sys.argv[3], question=sys.argv[4]))
+        retrieve(ranking=sys.argv[2], index_path=sys.argv[3], question=sys.argv[4])
     else:
         print(f"Error: unrecognized flag received - '{sys.argv[1]}'.")
         exit(-1)
