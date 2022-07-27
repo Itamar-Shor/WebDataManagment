@@ -9,7 +9,6 @@ QUERY = 'query'
 
 def build_index(corpus_dir, index_path='vsm_inverted_index.json'):
     builder = InverseIndex(corpus_dir)
-    # FIXME
     builder.build_inverted_index(index_path)
 
 
@@ -39,4 +38,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    from pip._internal.operations import freeze
+    with open('requirements.txt', 'w') as fd:
+        fd.write('\n'.join(freeze.freeze()))

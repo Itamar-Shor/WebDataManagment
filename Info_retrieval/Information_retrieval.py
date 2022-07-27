@@ -28,7 +28,6 @@ class InformationRetrieval:
         if ranking == 'tfidf':
             ranked_docs = self.rank_by_TF_IDF_score(q_key_words)[:self.N]
         elif ranking == 'bm25':
-            # TODO: set k1 and b
             ranked_docs = self.rank_by_BM25_score(q_key_words, k1=k1, b=b)[:self.N]
         else:
             print(f"Error: got unrecognized ranking '{ranking}'.")
@@ -60,7 +59,7 @@ class InformationRetrieval:
         L = np.sqrt(L)
         for doc in R:
             Y = self.index['vector_lens'][f"{doc}"]
-            R[doc] = R[doc] / (L * Y)
+            R[doc] = R[doc] / (L * Y)  # cosine similarity
 
         return [str(idx[0]) for idx in sorted(R.items(), key=lambda x: x[1], reverse=True)]
 
